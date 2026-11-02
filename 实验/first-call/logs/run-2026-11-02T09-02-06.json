@@ -1,0 +1,94 @@
+{
+  "time": "2026-11-02T09:02:06.663Z",
+  "mode": "complete",
+  "request": {
+    "url": "https://api.deepseek.com/chat/completions",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer sk-c****d074"
+    },
+    "body": {
+      "model": "deepseek-flash",
+      "messages": [
+        {
+          "role": "system",
+          "content": "你是一个文言文翻译官，只输出译文。"
+        },
+        {
+          "role": "user",
+          "content": "翻译：我从今天开始系统学习 AI 了。"
+        }
+      ],
+      "temperature": 1.2,
+      "max_tokens": 200
+    }
+  },
+  "response": {
+    "status": "200 OK",
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "connection": "keep-alive",
+      "content-encoding": "br",
+      "content-type": "application/json",
+      "date": "Mon, 02 Nov 2026 09:02:06 GMT",
+      "eo-cache-status": "MISS",
+      "eo-log-uuid": "12473079845301156877",
+      "server": "openresty",
+      "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+      "transfer-encoding": "chunked",
+      "vary": "accept-encoding, origin, access-control-request-method, access-control-request-headers",
+      "x-content-type-options": "nosniff",
+      "x-ds-trace-id": "381310712c921680261ffc43b4cb112c"
+    },
+    "rawBody": "{\"id\":\"71b75069-b349-421d-813d-e43f955d6660\",\"object\":\"chat.completion\",\"created\":1793610126,\"model\":\"deepseek-flash\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":\"我们需要回答用户。用户要求“翻译：我从今天开始系统学习 AI 了。” 而且系统说你是文言文翻译官，只输出译文。需要把现代汉语句子翻译成文言文？ \\\"我从今天开始系统学习 AI 了。\\\" 需要只输出译文。要文言文表达。需要处理 AI 怎么译？可保留“AI”或用“人工智能”。文言文翻译官，只输出译文。应该输出一句文言文。需要准确：我从今天开始系统学习AI了。文言：吾自今日始系统学人工智能矣。或“吾自今始，专心治人工智能之学矣。” 只输出译文。需要不要解释。可以用“吾自今日始，系统习人工智能矣。” 系统学习 = 系统学习，文言可说“循序而习”或“系统治学”。要保留AI可能直接“AI”。最好“吾自今日始，系统习 AI 矣。” 但文言中夹杂AI？\"},\"logprobs\":null,\"finish_reason\":\"length\"}],\"usage\":{\"prompt_tokens\":52,\"completion_tokens\":200,\"total_tokens\":252,\"prompt_tokens_details\":{\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":200},\"prompt_cache_hit_tokens\":0,\"prompt_cache_miss_tokens\":52},\"system_fingerprint\":\"bc19ba97cbe016479903222bb1578db6\"}",
+    "parsed": {
+      "id": "71b75069-b349-421d-813d-e43f955d6660",
+      "object": "chat.completion",
+      "created": 1793610126,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": "我们需要回答用户。用户要求“翻译：我从今天开始系统学习 AI 了。” 而且系统说你是文言文翻译官，只输出译文。需要把现代汉语句子翻译成文言文？ \"我从今天开始系统学习 AI 了。\" 需要只输出译文。要文言文表达。需要处理 AI 怎么译？可保留“AI”或用“人工智能”。文言文翻译官，只输出译文。应该输出一句文言文。需要准确：我从今天开始系统学习AI了。文言：吾自今日始系统学人工智能矣。或“吾自今始，专心治人工智能之学矣。” 只输出译文。需要不要解释。可以用“吾自今日始，系统习人工智能矣。” 系统学习 = 系统学习，文言可说“循序而习”或“系统治学”。要保留AI可能直接“AI”。最好“吾自今日始，系统习 AI 矣。” 但文言中夹杂AI？"
+          },
+          "logprobs": null,
+          "finish_reason": "length"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 52,
+        "completion_tokens": 200,
+        "total_tokens": 252,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 200
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 52
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    },
+    "finishReason": "length",
+    "usage": {
+      "prompt_tokens": 52,
+      "completion_tokens": 200,
+      "total_tokens": 252,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 200
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 52
+    }
+  },
+  "networkError": null,
+  "durationMs": 2030
+}

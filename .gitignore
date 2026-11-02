@@ -1,0 +1,10 @@
+# 依赖
+node_modules/
+
+# 密钥与本地环境——绝不入库（实验工程里的 .env 含真实 API Key）
+.env
+.env.*
+
+# 系统杂项
+.DS_Store
+Thumbs.db

@@ -1,0 +1,14 @@
+{
+  "name": "first-call",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx first-call.ts",
+    "stream": "tsx first-call.ts --stream",
+    "ui": "tsx server.ts"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.0"
+  }
+}

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>first-call 运行报告 · 200 OK</title>
+<style>
+  :root {
+    --bg: #f6f6f8; --fg: #1c1c22; --muted: #6d6d7a; --card: #ffffff; --border: #e3e3ea;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --code-bg: #ececf2;
+    --ok: #16a34a; --ok-soft: rgba(22, 163, 74, .1); --warn: #d97706; --warn-soft: rgba(217, 119, 6, .12); --bad: #dc2626; --bad-soft: rgba(220, 38, 38, .1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141419; --fg: #e7e7ee; --muted: #9c9cab; --card: #1d1d26; --border: #2d2d3a;
+      --accent: #8f94f8; --accent-soft: rgba(143, 148, 248, .12); --code-bg: #26262f;
+      --ok: #4ade80; --ok-soft: rgba(74, 222, 128, .12); --warn: #fbbf24; --warn-soft: rgba(251, 191, 36, .12); --bad: #f87171; --bad-soft: rgba(248, 113, 113, .12);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-size: 15px; line-height: 1.7; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 36px 20px 60px; }
+  h1 { font-size: 22px; margin: 0 0 10px; }
+  h2 { font-size: 17px; margin: 30px 0 8px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+  .badge { font-size: 13px; padding: 3px 12px; border-radius: 999px; background: var(--code-bg); color: var(--muted); }
+  .badge.s { font-weight: 600; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.bad { background: var(--bad-soft); color: var(--bad); }
+  .hint { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 14px; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.6; margin: 8px 0; }
+  code { background: var(--code-bg); border-radius: 5px; padding: 1px 5px; font-size: .88em; }
+  pre code { background: none; padding: 0; }
+  .mono { white-space: nowrap; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12.5px; }
+  th, td { text-align: left; padding: 5px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  td.mono { white-space: pre-wrap; word-break: break-all; }
+  blockquote { margin: 10px 0; padding: 12px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
+  .k { color: #7c3aed; } .s { color: #0d9488; } .n { color: #b45309; } .b { color: #dc2626; }
+  @media (prefers-color-scheme: dark) { .k { color: #a78bfa; } .s { color: #2dd4bf; } .n { color: #fbbf24; } .b { color: #f87171; } }
+  .muted { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>first-call 运行报告</h1>
+  <div class="badges">
+    <span class="badge s ok">200 OK</span>
+    <span class="badge">非流式</span>
+    <span class="badge">deepseek-flash</span>
+    <span class="badge">耗时 2382 ms</span>
+    
+    
+  </div>
+  <div class="hint">成功。试试 npm run stream 看流式版本，或改 .env 里的 LLM_BASE_URL / LLM_MODEL 换厂商。</div>
+
+  <h2>请求</h2>
+  <p class="muted">等价的 curl 命令（Key 已打码）：</p>
+  <pre>curl -X POST "https://api.deepseek.com/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-c****d074" \
+  -d '{"model":"deepseek-flash","messages":[{"role":"system","content":"你是一个文言文翻译官，只输出译文。"},{"role":"user","content":"翻译：我从今天开始系统学习 AI 了。"}],"temperature":1.2,"max_tokens":200}'</pre>
+  <p class="muted">请求体（messages / temperature / max_tokens 的含义见《2.1-2.3 地基详解》产出实战一节）：</p>
+  <pre>{
+  <span class="k">"model"</span>: <span class="s">"deepseek-flash"</span>,
+  <span class="k">"messages"</span>: [
+    {
+      <span class="k">"role"</span>: <span class="s">"system"</span>,
+      <span class="k">"content"</span>: <span class="s">"你是一个文言文翻译官，只输出译文。"</span>
+    },
+    {
+      <span class="k">"role"</span>: <span class="s">"user"</span>,
+      <span class="k">"content"</span>: <span class="s">"翻译：我从今天开始系统学习 AI 了。"</span>
+    }
+  ],
+  <span class="k">"temperature"</span>: <span class="n">1.2</span>,
+  <span class="k">"max_tokens"</span>: <span class="n">200</span>
+}</pre>
+
+  <h2>响应头</h2><pre>{
+  <span class="k">"access-control-allow-credentials"</span>: <span class="s">"true"</span>,
+  <span class="k">"connection"</span>: <span class="s">"keep-alive"</span>,
+  <span class="k">"content-encoding"</span>: <span class="s">"br"</span>,
+  <span class="k">"content-type"</span>: <span class="s">"application/json"</span>,
+  <span class="k">"date"</span>: <span class="s">"Mon, 02 Nov 2026 08:31:33 GMT"</span>,
+  <span class="k">"eo-cache-status"</span>: <span class="s">"MISS"</span>,
+  <span class="k">"eo-log-uuid"</span>: <span class="s">"13389170725630526824"</span>,
+  <span class="k">"server"</span>: <span class="s">"openresty"</span>,
+  <span class="k">"strict-transport-security"</span>: <span class="s">"max-age=31536000; includeSubDomains; preload"</span>,
+  <span class="k">"transfer-encoding"</span>: <span class="s">"chunked"</span>,
+  <span class="k">"vary"</span>: <span class="s">"accept-encoding, origin, access-control-request-method, access-control-request-headers"</span>,
+  <span class="k">"x-content-type-options"</span>: <span class="s">"nosniff"</span>,
+  <span class="k">"x-ds-trace-id"</span>: <span class="s">"79553562466a054f99bebf4da162e89d"</span>
+}</pre>
+  <h2>响应体（原始）</h2><pre>{
+  <span class="k">"id"</span>: <span class="s">"de8769e1-255b-4e05-a545-c26cc5a8f6c6"</span>,
+  <span class="k">"object"</span>: <span class="s">"chat.completion"</span>,
+  <span class="k">"created"</span>: <span class="n">1793608293</span>,
+  <span class="k">"model"</span>: <span class="s">"deepseek-flash"</span>,
+  <span class="k">"choices"</span>: [
+    {
+      <span class="k">"index"</span>: <span class="n">0</span>,
+      <span class="k">"message"</span>: {
+        <span class="k">"role"</span>: <span class="s">"assistant"</span>,
+        <span class="k">"content"</span>: <span class="s">""</span>,
+        <span class="k">"reasoning_content"</span>: <span class="s">"我们需要回答用户。用户说“你是一个文言文翻译官，只输出译文。翻译：我从今天开始系统学习 AI 了。”需要只输出译文，文言文翻译。把现代汉语译成文言文。需要简洁。原句：我从今天开始系统学习AI了。译文要文言。表达：吾自今日始，系统学AI矣。或用“余自今起始，专习人工智能矣。”需要只输出译文。不能解释。注意“AI”保留还是译“人工智能”？文言文翻译官，可译为“人工智能”。只输出译文。尽量文言：吾自今日始，系统习人工智能矣。系统作状语有点现代，可以说“循序专习”。原意系统学习 AI = 系统学习人工智能。文言：余自今日始，系统治人工智能之学矣。可能“系统”在文言有“统系”？可译为“有统绪地学”。更自然：吾自今始，专治人工智能"</span>
+      },
+      <span class="k">"logprobs"</span>: <span class="b">null</span>,
+      <span class="k">"finish_reason"</span>: <span class="s">"length"</span>
+    }
+  ],
+  <span class="k">"usage"</span>: {
+    <span class="k">"prompt_tokens"</span>: <span class="n">52</span>,
+    <span class="k">"completion_tokens"</span>: <span class="n">200</span>,
+    <span class="k">"total_tokens"</span>: <span class="n">252</span>,
+    <span class="k">"prompt_tokens_details"</span>: {
+      <span class="k">"cached_tokens"</span>: <span class="n">0</span>
+    },
+    <span class="k">"completion_tokens_details"</span>: {
+      <span class="k">"reasoning_tokens"</span>: <span class="n">200</span>
+    },
+    <span class="k">"prompt_cache_hit_tokens"</span>: <span class="n">0</span>,
+    <span class="k">"prompt_cache_miss_tokens"</span>: <span class="n">52</span>
+  },
+  <span class="k">"system_fingerprint"</span>: <span class="s">"bc19ba97cbe016479903222bb1578db6"</span>
+}</pre>
+  
+  <h2>Token 用量（usage）</h2><pre>{
+  <span class="k">"prompt_tokens"</span>: <span class="n">52</span>,
+  <span class="k">"completion_tokens"</span>: <span class="n">200</span>,
+  <span class="k">"total_tokens"</span>: <span class="n">252</span>,
+  <span class="k">"prompt_tokens_details"</span>: {
+    <span class="k">"cached_tokens"</span>: <span class="n">0</span>
+  },
+  <span class="k">"completion_tokens_details"</span>: {
+    <span class="k">"reasoning_tokens"</span>: <span class="n">200</span>
+  },
+  <span class="k">"prompt_cache_hit_tokens"</span>: <span class="n">0</span>,
+  <span class="k">"prompt_cache_miss_tokens"</span>: <span class="n">52</span>
+}</pre>
+
+  <p class="muted">生成于 2026-11-02T08:31:34.296Z · 结构化日志：logs/last-run.json · 改完 .env 后重新 <code>npm start</code> 或 <code>npm run stream</code> 即可刷新本报告</p>
+</div>
+</body>
+</html>

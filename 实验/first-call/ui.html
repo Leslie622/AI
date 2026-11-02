@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>first-call 控制台</title>
+<style>
+  :root {
+    --bg: #f6f6f8; --fg: #1c1c22; --muted: #6d6d7a; --card: #ffffff; --border: #e3e3ea;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --code-bg: #ececf2;
+    --ok: #16a34a; --ok-soft: rgba(22, 163, 74, .1); --warn: #d97706; --warn-soft: rgba(217, 119, 6, .12);
+    --bad: #dc2626; --bad-soft: rgba(220, 38, 38, .1); --console-bg: #1b1b22; --console-fg: #d6d6e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141419; --fg: #e7e7ee; --muted: #9c9cab; --card: #1d1d26; --border: #2d2d3a;
+      --accent: #8f94f8; --accent-soft: rgba(143, 148, 248, .12); --code-bg: #26262f;
+      --ok: #4ade80; --ok-soft: rgba(74, 222, 128, .12); --warn: #fbbf24; --warn-soft: rgba(251, 191, 36, .12);
+      --bad: #f87171; --bad-soft: rgba(248, 113, 113, .12); --console-bg: #101015; --console-fg: #c9c9d6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-size: 14.5px; line-height: 1.65; }
+  header.top {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: 5;
+  }
+  header.top h1 { font-size: 16px; margin: 0; }
+  .badge { font-size: 12px; padding: 2px 10px; border-radius: 999px; background: var(--code-bg); color: var(--muted); white-space: nowrap; }
+  .badge.s { font-weight: 600; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.bad { background: var(--bad-soft); color: var(--bad); }
+  .layout { display: grid; grid-template-columns: 370px 1fr; gap: 16px; padding: 16px 20px 40px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .panel h2 { font-size: 13px; margin: 0 0 10px; color: var(--muted); font-weight: 500; letter-spacing: .04em; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+  .field label b { color: var(--fg); font-weight: 500; }
+  input[type="text"], input[type="password"], input[type="number"], select, textarea {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+    color: var(--fg); padding: 7px 10px; font-size: 13.5px; outline: none;
+  }
+  textarea { resize: vertical; min-height: 64px; line-height: 1.6; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .temp-val { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 13.5px; margin: 4px 0 12px; }
+  .check input { accent-color: var(--accent); width: 15px; height: 15px; }
+  button.primary {
+    width: 100%; padding: 9px 0; border: none; border-radius: 9px; cursor: pointer;
+    background: var(--accent); color: var(--bg); font-size: 14.5px; font-weight: 600;
+  }
+  button.primary:disabled { opacity: .55; cursor: wait; }
+  .quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .quick button {
+    font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer;
+    background: var(--accent-soft); color: var(--accent); border: 1px solid transparent;
+  }
+  .quick button:hover { border-color: var(--accent); }
+  #history { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
+  .hist-item {
+    display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; cursor: pointer;
+    background: none; border: none; border-bottom: 1px dashed var(--border); padding: 5px 2px; color: var(--fg); font-size: 12.5px;
+  }
+  .hist-item:hover { background: var(--accent-soft); }
+  .hist-item .t { color: var(--muted); }
+  .empty { color: var(--muted); font-size: 13px; padding: 20px 10px; text-align: center; border: 1px dashed var(--border); border-radius: 12px; }
+  .run { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+  .run-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+  .run .reply {
+    white-space: pre-wrap; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; margin: 10px 0; min-height: 20px;
+  }
+  .run .reply:empty { display: none; }
+  pre.console {
+    background: var(--console-bg); color: var(--console-fg); border-radius: 10px;
+    padding: 10px 14px; margin: 6px 0 10px; max-height: 420px; overflow-y: auto;
+    font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+  }
+  .console-tools { display: flex; justify-content: space-between; align-items: center; margin: 10px 0 0; }
+  .console-tools[hidden] { display: none; }
+  .console-tools .ctoggle {
+    font-size: 12px; padding: 2px 10px; border-radius: 999px; cursor: pointer;
+    background: var(--accent-soft); color: var(--accent); border: 1px solid transparent;
+  }
+  .console-tools .ctoggle:hover { border-color: var(--accent); }
+  .c-mut { color: var(--muted); }
+  .c-ok { color: var(--ok); }
+  .c-done { color: var(--muted); font-weight: 600; }
+  .c-txt { color: var(--fg); }
+  details.jsonl { margin: 8px 0; }
+  details.jsonl summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
+  details.jsonl pre {
+    background: var(--code-bg); border-radius: 10px; padding: 10px 14px; margin: 6px 0 0;
+    overflow-x: auto; font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-all;
+  }
+  .k { color: #7c3aed; } .s { color: #0d9488; } .n { color: #b45309; } .b { color: #dc2626; }
+  @media (prefers-color-scheme: dark) { .k { color: #a78bfa; } .s { color: #2dd4bf; } .n { color: #fbbf24; } .b { color: #f87171; } }
+  .muted { color: var(--muted); font-size: 12.5px; }
+  .banner {
+    background: var(--warn-soft); color: var(--warn); border-radius: 10px;
+    padding: 8px 14px; font-size: 13px; margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>first-call 控制台</h1>
+  <span class="badge" id="keyBadge">Key: 加载中…</span>
+  <span class="badge" id="srvBadge">http://localhost:<span id="port">8787</span></span>
+  <span class="badge">每次调用自动写入 logs/（Key 打码）</span>
+</header>
+
+<div class="layout">
+  <!-- 左：参数面板 -->
+  <aside class="panel">
+    <h2>请求参数</h2>
+    <div class="field">
+      <label for="preset"><b>服务商预设</b>（自动填地址）</label>
+      <select id="preset"></select>
+    </div>
+    <div class="field">
+      <label for="baseUrl"><b>BASE_URL</b>（换厂商只改这里 + 模型名）</label>
+      <input type="text" id="baseUrl" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="model"><b>model</b></label>
+      <input type="text" id="model" list="modelList" spellcheck="false" autocomplete="off">
+      <datalist id="modelList"></datalist>
+    </div>
+    <div class="field">
+      <label for="apiKey">API Key 覆盖（可选，仅本次会话内存，不落盘；留空用 .env 的）</label>
+      <input type="password" id="apiKey" spellcheck="false" autocomplete="off" placeholder="sk-...">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="temperature"><b>temperature</b> <span class="temp-val" id="tempVal">1.2</span></label>
+        <input type="range" id="temperature" min="0" max="2" step="0.1" value="1.2">
+      </div>
+      <div class="field">
+        <label for="maxTokens"><b>max_tokens</b></label>
+        <input type="number" id="maxTokens" value="200" min="1" max="8192">
+      </div>
+    </div>
+    <div class="field">
+      <label for="system"><b>system</b>（角色设定，可留空）</label>
+      <textarea id="system" spellcheck="false">你是一个文言文翻译官，只输出译文。</textarea>
+    </div>
+    <div class="field">
+      <label for="user"><b>user</b>（Ctrl+Enter 发送）</label>
+      <textarea id="user" spellcheck="false">翻译：我从今天开始系统学习 AI 了。</textarea>
+    </div>
+    <label class="check"><input type="checkbox" id="stream" checked> 流式（实时看 SSE 逐行推送）</label>
+    <button class="primary" id="send">发送请求</button>
+    <div class="quick" id="quick"></div>
+
+    <h2 style="margin-top:18px;">最近运行（logs/）</h2>
+    <div id="history"><div class="muted">暂无记录</div></div>
+  </aside>
+
+  <!-- 右：实时输出 -->
+  <section id="runs">
+    <div class="empty" id="emptyHint">
+      左侧配置好参数后点「发送请求」。<br>
+      流式模式下，这里会实时显示每一行 SSE 推送（<samp>data: {...}</samp>）和逐块拼出的回复——<br>这就是 2.3 说的"打字机效果"的原材料。
+    </div>
+  </section>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const PRESETS = [
+    { name: "DeepSeek", baseUrl: "https://api.deepseek.com", models: ["deepseek-chat", "deepseek-reasoner"] },
+    { name: "智谱 GLM", baseUrl: "https://open.bigmodel.cn/api/paas/v4", models: ["glm-4-flash", "glm-4-plus"] },
+    { name: "硅基流动", baseUrl: "https://api.siliconflow.cn/v1", models: ["deepseek-ai/DeepSeek-V3", "Qwen/Qwen2.5-72B-Instruct"] },
+    { name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", models: ["openai/gpt-4o", "anthropic/claude-sonnet-4"] },
+    { name: "自定义", baseUrl: "", models: [] },
+  ];
+  const QUICK = [
+    { label: "换角色：海盗腔 TS 工程师", set: { system: "你是一个用海盗腔说话的资深 TypeScript 工程师，回答要带航海比喻。" } },
+    { label: "temperature → 0", set: { temperature: 0 } },
+    { label: "temperature → 1.5", set: { temperature: 1.5 } },
+    { label: "max_tokens → 10", set: { maxTokens: 10 } },
+    { label: "system 留空", set: { system: "" } },
+  ];
+
+  // ---------- 工具 ----------
+  const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  function hi(jsonStr) {
+    return esc(jsonStr).replace(
+      /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d+)?([eE][+-]?\d+)?/g,
+      (m, str, colon) => {
+        if (str) return `<span class="${colon ? "k" : "s"}">${str}</span>${colon ?? ""}`;
+        if (m === "true" || m === "false" || m === "null") return `<span class="b">${m}</span>`;
+        return `<span class="n">${m}</span>`;
+      },
+    );
+  }
+  const pretty = (o) => hi(JSON.stringify(o, null, 2));
+  const statusCls = (statusStr) => {
+    const code = parseInt(statusStr, 10);
+    if (Number.isNaN(code)) return "bad";
+    return code < 300 ? "ok" : code < 500 ? "warn" : "bad";
+  };
+  const extractReply = (d) =>
+    d.mode === "stream"
+      ? (d.response?.assembledText ?? "")
+      : (d.response?.parsed?.choices?.[0]?.message?.content ?? "(无)");
+  const fmtTime = (iso) => (iso ? new Date(iso).toLocaleTimeString("zh-CN", { hour12: false }) : "");
+
+  // ---------- 运行卡片 ----------
+  function createCard() {
+    $("emptyHint")?.remove();
+    const root = document.createElement("div");
+    root.className = "run";
+    root.innerHTML =
+      '<div class="run-head"><span class="badge s">发送中…</span><span class="badge"></span><span class="badge"></span></div>' +
+      '<details class="jsonl"><summary>请求详情（URL / 请求体 / 打码后的头）</summary><pre></pre></details>' +
+      '<div class="reply"></div>' +
+      '<div class="console-tools" hidden><span class="muted" data-role="count"></span><button type="button" class="ctoggle">精简格式</button></div>' +
+      '<pre class="console" hidden></pre>' +
+      '<div class="foot muted"></div>';
+    $("runs").prepend(root);
+    const card = {
+      root,
+      badge: root.querySelector(".badge"),
+      b2: root.querySelectorAll(".badge")[1],
+      b3: root.querySelectorAll(".badge")[2],
+      reqPre: root.querySelector("details.jsonl pre"),
+      reqDetails: root.querySelector("details.jsonl"),
+      reply: root.querySelector(".reply"),
+      consolePre: root.querySelector("pre.console"),
+      foot: root.querySelector(".foot"),
+      tools: root.querySelector(".console-tools"),
+      count: root.querySelector('[data-role="count"]'),
+      toggle: root.querySelector(".ctoggle"),
+      lines: [],        // { t, raw, jsonHtml, compactHtml }
+      consoleMode: "json", // json（完整格式化） | compact（精简行）
+    };
+    card.toggle.onclick = () => {
+      card.consoleMode = card.consoleMode === "json" ? "compact" : "json";
+      card.toggle.textContent = card.consoleMode === "json" ? "精简格式" : "格式化 JSON";
+      renderConsole(card);
+    };
+    return card;
+  }
+
+  // ---------- 流式控制台：解析出紧凑行，原始行一键切换 ----------
+  function parseChunk(raw) {
+    if (!raw.startsWith("data:")) return { kind: "raw", text: raw };
+    const p = raw.slice(5).trim();
+    if (p === "[DONE]") return { kind: "done" };
+    try {
+      const j = JSON.parse(p);
+      const ch = j?.choices?.[0];
+      return {
+        kind: "data",
+        obj: j,
+        delta: typeof ch?.delta?.content === "string" ? ch.delta.content : null,
+        role: ch?.delta?.role ?? null,
+        finish: ch?.finish_reason ?? null,
+        usage: j?.usage ?? null,
+      };
+    } catch {
+      return { kind: "raw", text: raw };
+    }
+  }
+
+  // 完整格式化视图：所有字段原样保留，JSON 缩进 + 高亮
+  function fmtJson(idx, t, pc) {
+    const head = `<span class="c-mut">#${String(idx + 1).padStart(2, "0")}</span> <span class="c-mut">${String(t).padStart(4)}ms</span>`;
+    if (pc.kind === "done") return `${head} <span class="c-done">data: [DONE]</span>`;
+    if (pc.kind === "raw") return `${head} ${esc(pc.text)}`;
+    return `${head}\n${hi(JSON.stringify(pc.obj, null, 2))}`;
+  }
+
+  function fmtParsed(idx, t, pc) {
+    const seq = `<span class="c-mut">#${String(idx + 1).padStart(2, "0")}</span>`;
+    const tm = `<span class="c-mut">${String(t).padStart(4)}ms</span>`;
+    if (pc.kind === "done") return `${seq} ${tm} <span class="c-done">[DONE]</span>`;
+    if (pc.kind === "raw") return `${seq} ${tm} ${esc(pc.text)}`;
+    const body = [];
+    if (pc.role) body.push(`<span class="c-mut">(role: ${esc(pc.role)})</span>`);
+    if (pc.delta !== null) body.push(pc.delta === "" ? `<span class="c-mut">""</span>` : `<span class="c-txt">${esc(pc.delta)}</span>`);
+    if (!body.length && pc.usage) body.push(`<span class="c-mut">(usage 块)</span>`);
+    if (!body.length) body.push(`<span class="c-mut">(空)</span>`);
+    let html = `${seq} ${tm} ${body.join(" ")}`;
+    if (pc.finish) html += `  <span class="c-ok">✓ ${esc(pc.finish)}</span>`;
+    if (pc.usage) html += ` <span class="c-ok">· tok ${pc.usage.prompt_tokens}+${pc.usage.completion_tokens}=${pc.usage.total_tokens}</span>`;
+    return html;
+  }
+
+  function renderConsole(card) {
+    const n = card.lines.length;
+    const over = Math.max(0, n - 400);
+    const rows = card.lines.slice(-400).map((ln) => (card.consoleMode === "json" ? ln.jsonHtml : ln.compactHtml));
+    card.consolePre.innerHTML =
+      (over > 0 ? `<span class="c-mut">（前 ${over} 行已省略，完整数据见 logs/last-run.json）</span>\n` : "") +
+      rows.join("\n");
+    card.count.textContent = `${n} 行`;
+    card.consolePre.scrollTop = card.consolePre.scrollHeight;
+  }
+
+  function appendChunk(card, t, raw) {
+    card.consolePre.hidden = false;
+    card.tools.hidden = false;
+    const nearBottom = card.consolePre.scrollHeight - card.consolePre.scrollTop - card.consolePre.clientHeight < 40;
+    const pc = parseChunk(raw);
+    const i = card.lines.length;
+    card.lines.push({ t, raw, jsonHtml: fmtJson(i, t, pc), compactHtml: fmtParsed(i, t, pc) });
+    if (nearBottom) renderConsole(card);
+    else {
+      card.count.textContent = `${card.lines.length} 行`;
+      const pos = card.consolePre.scrollTop;
+      renderConsole(card);
+      card.consolePre.scrollTop = pos;
+    }
+  }
+
+  function consoleShowRaw(card, text) {
+    card.consolePre.hidden = false;
+    card.tools.hidden = true;
+    card.lines = [{ t: 0, raw: text ?? "", html: esc(text ?? "") }];
+    card.consolePre.innerHTML = esc(text ?? "");
+    card.consolePre.scrollTop = 0;
+  }
+
+  // 完整对象格式化展示（非流式响应 / 错误响应）
+  function consoleShowJson(card, title, obj) {
+    card.consolePre.hidden = false;
+    card.tools.hidden = true;
+    card.lines = [];
+    card.consolePre.innerHTML =
+      (title ? `<span class="c-mut">${esc(title)}\n</span>` : "") +
+      hi(JSON.stringify(obj, null, 2));
+    card.consolePre.scrollTop = 0;
+  }
+
+  let consoleLines = [];
+  function consoleAppend(card, line) {
+    card.consolePre.hidden = false;
+    consoleLines.push(line);
+    const over = consoleLines.length - 400;
+    const text = (over > 0 ? `（前 ${over} 行已省略，完整数据见 logs/last-run.json）\n` : "") + consoleLines.slice(-400).join("\n");
+    const stick = card.consolePre.scrollHeight - card.consolePre.scrollTop - card.consolePre.clientHeight < 40;
+    card.consolePre.textContent = text;
+    if (stick) card.consolePre.scrollTop = card.consolePre.scrollHeight;
+  }
+
+  function fillRequest(card, d) {
+    const r = d.request ?? {};
+    card.reqPre.innerHTML =
+      `URL  ${esc(r.url ?? "")}\n\n` + pretty({ headers: r.headers, body: r.body });
+  }
+
+  function fillResult(card, d) {
+    const st = d.response?.status ?? "?";
+    const cls = statusCls(st);
+    card.badge.className = `badge s ${cls}`;
+    card.badge.textContent = st;
+    card.b2.textContent = d.mode === "stream" ? "流式 SSE" : "非流式";
+    card.b3.textContent = `${d.durationMs ?? "?"} ms`;
+    const usage = d.response?.usage ?? d.response?.parsed?.usage;
+    const fin = d.response?.finishReason;
+    card.foot.innerHTML =
+      (fin ? `finish_reason: ${esc(String(fin))} · ` : "") +
+      (usage ? `usage: ${esc(JSON.stringify(usage))}` : "");
+  }
+
+  function renderLog(d) {
+    const card = createCard();
+    fillRequest(card, d);
+    fillResult(card, d);
+    card.reply.textContent = extractReply(d);
+    if (d.mode === "stream" && d.response?.chunks?.length) {
+      card.consolePre.hidden = false;
+      card.tools.hidden = false;
+      card.lines = d.response.chunks.map((c, i) => {
+        const pc = parseChunk(c.raw);
+        return { t: c.t, raw: c.raw, jsonHtml: fmtJson(i, c.t, pc), compactHtml: fmtParsed(i, c.t, pc) };
+      });
+      renderConsole(card);
+    }
+    if (d.networkError) {
+      card.badge.className = "badge s bad";
+      card.badge.textContent = "网络错误";
+      card.foot.innerHTML = `❌ ${esc(d.networkError)}`;
+    }
+  }
+
+  // ---------- 发送 ----------
+  let busy = false;
+  async function send() {
+    if (busy) return;
+    const payload = {
+      baseUrl: $("baseUrl").value.trim(),
+      model: $("model").value.trim(),
+      apiKey: $("apiKey").value.trim() || undefined,
+      temperature: Number($("temperature").value),
+      maxTokens: Number($("maxTokens").value),
+      system: $("system").value,
+      user: $("user").value,
+      stream: $("stream").checked,
+    };
+    if (!payload.user || !payload.user.trim()) {
+      alert("user 消息不能为空");
+      return;
+    }
+    busy = true;
+    $("send").disabled = true;
+    const card = createCard();
+    const body = JSON.stringify(payload);
+    try {
+      const r = await fetch("/api/call", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      if (payload.stream) {
+        card.b2.textContent = "流式 SSE";
+        card.reply.textContent = "";
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let i;
+          while ((i = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, i).trim();
+            buf = buf.slice(i + 1);
+            if (!line) continue;
+            let ev;
+            try { ev = JSON.parse(line); } catch { continue; }
+            handleEvent(card, ev);
+          }
+        }
+      } else {
+        card.b2.textContent = "非流式";
+        const d = await r.json();
+        fillRequest(card, d);
+        fillResult(card, d);
+        card.reply.textContent = extractReply(d);
+        if (!d.networkError) {
+          consoleShowJson(card, `完整响应 · ${d.response?.status ?? "?"}`, {
+            headers: d.response?.headers,
+            body: d.response?.parsed ?? d.response?.rawBody ?? "(空)",
+          });
+        }
+        if (d.networkError) {
+          card.badge.className = "badge s bad";
+          card.badge.textContent = "网络错误";
+          card.foot.innerHTML = `❌ ${esc(d.networkError)}`;
+        }
+      }
+    } catch (e) {
+      card.badge.className = "badge s bad";
+      card.badge.textContent = "本地错误";
+      card.foot.textContent = String(e);
+    } finally {
+      busy = false;
+      $("send").disabled = false;
+      loadHistory();
+    }
+  }
+
+  function handleEvent(card, ev) {
+    switch (ev.type) {
+      case "meta":
+        fillRequest(card, ev);
+        card.badge.className = `badge s ${statusCls(ev.status)}`;
+        card.badge.textContent = ev.status;
+        card.b3.textContent = "…";
+        break;
+      case "chunk":
+        appendChunk(card, ev.t, ev.raw);
+        break;
+      case "delta":
+        card.reply.textContent += ev.text;
+        break;
+      case "usage":
+        card.foot.innerHTML = `usage: ${esc(JSON.stringify(ev.usage))}`;
+        break;
+      case "done":
+        card.b3.textContent = `${ev.durationMs} ms`;
+        card.foot.innerHTML = `共 ${ev.chunkCount} 行推送` + (card.foot.innerHTML ? ` · ${card.foot.innerHTML}` : "");
+        break;
+      case "error": {
+        card.badge.className = "badge s bad";
+        card.badge.textContent = ev.status ?? "出错";
+        if (ev.parsed) consoleShowJson(card, `错误响应 · ${ev.status ?? ""}`, ev.parsed);
+        else consoleShowRaw(card, ev.rawBody ?? ev.message ?? "");
+        if (parseInt(ev.status, 10) === 401 || parseInt(ev.status, 10) === 403)
+          card.foot.innerHTML = "💡 Key 无效或未填：编辑 .env 或在左侧覆盖 Key";
+        else if (parseInt(ev.status, 10) === 404)
+          card.foot.innerHTML = "💡 404：BASE_URL 不对（对照左侧预设）";
+        break;
+      }
+    }
+  }
+
+  // ---------- 历史 ----------
+  async function loadHistory() {
+    const list = await (await fetch("/api/history")).json();
+    const box = $("history");
+    box.innerHTML = "";
+    if (!list.length) {
+      box.innerHTML = '<div class="muted">暂无记录</div>';
+      return;
+    }
+    for (const it of list) {
+      const btn = document.createElement("button");
+      btn.className = "hist-item";
+      btn.innerHTML =
+        `<span class="badge ${statusCls(it.status)}">${esc(String(it.status).slice(0, 3))}</span>` +
+        `<span>${it.mode === "stream" ? "流" : "全"}</span>` +
+        `<span class="t">${esc(fmtTime(it.time))} · ${it.durationMs ?? "?"}ms</span>`;
+      btn.title = `${it.status} · 点击查看完整日志`;
+      btn.onclick = async () => {
+        renderLog(await (await fetch(`/api/history/${it.file}`)).json());
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      };
+      box.appendChild(btn);
+    }
+  }
+
+  // ---------- 初始化 ----------
+  function fillModelDatalist(models) {
+    $("modelList").innerHTML = models.map((m) => `<option value="${esc(m)}">`).join("");
+  }
+  function initQuick() {
+    const box = $("quick");
+    for (const q of QUICK) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = q.label;
+      btn.onclick = () => {
+        if (q.set.system !== undefined) $("system").value = q.set.system;
+        if (q.set.temperature !== undefined) { $("temperature").value = q.set.temperature; $("tempVal").textContent = q.set.temperature; }
+        if (q.set.maxTokens !== undefined) $("maxTokens").value = q.set.maxTokens;
+      };
+      box.appendChild(btn);
+    }
+  }
+  async function init() {
+    const presetSel = $("preset");
+    presetSel.innerHTML = PRESETS.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join("");
+    presetSel.onchange = () => {
+      const p = PRESETS[presetSel.value];
+      if (p.baseUrl) $("baseUrl").value = p.baseUrl;
+      fillModelDatalist(p.models);
+    };
+    fillModelDatalist(PRESETS[0].models);
+    initQuick();
+
+    $("temperature").oninput = () => ($("tempVal").textContent = $("temperature").value);
+    $("send").onclick = send;
+    $("user").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+    });
+
+    try {
+      const cfg = await (await fetch("/api/config")).json();
+      $("baseUrl").value = cfg.baseUrl;
+      $("model").value = cfg.model;
+      $("keyBadge").textContent = "Key: " + cfg.keyMasked;
+      $("keyBadge").className = "badge " + (cfg.hasKey ? "ok" : "warn");
+      const idx = PRESETS.findIndex((p) => p.baseUrl === cfg.baseUrl);
+      if (idx >= 0) {
+        presetSel.value = idx;
+        fillModelDatalist(PRESETS[idx].models);
+      } else {
+        presetSel.value = PRESETS.length - 1;
+        fillModelDatalist([]);
+      }
+      if (!cfg.hasKey) {
+        const banner = document.createElement("div");
+        banner.className = "banner";
+        banner.textContent = "还没检测到有效 Key：编辑 first-call/.env 后重启服务，或在左侧临时覆盖。";
+        $("runs").prepend(banner);
+      }
+    } catch { /* 配置加载失败不影响手填 */ }
+    loadHistory();
+  }
+  init();
+</script>
+</body>
+</html>
