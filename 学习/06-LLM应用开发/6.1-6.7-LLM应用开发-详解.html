@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>06 · LLM 应用开发 · 6.1–6.7 详解</title>
+<style>
+  :root {
+    --bg: #f6f6f8; --fg: #1c1c22; --muted: #6d6d7a; --card: #ffffff; --border: #e3e3ea;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --code-bg: #ececf2;
+    --ok: #16a34a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141419; --fg: #e7e7ee; --muted: #9c9cab; --card: #1d1d26; --border: #2d2d3a;
+      --accent: #8f94f8; --accent-soft: rgba(143, 148, 248, .12); --code-bg: #26262f;
+      --ok: #4ade80;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-size: 15.5px; line-height: 1.75; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 20px 80px; }
+
+  header.top { padding: 44px 0 8px; }
+  header.top h1 { font-size: 26px; margin: 0 0 6px; }
+  header.top .meta { color: var(--muted); font-size: 13px; }
+  header.top .meta b { color: var(--fg); font-weight: 500; }
+  .usage {
+    margin-top: 16px; background: var(--accent-soft); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px; font-size: 14px;
+  }
+  nav.toc {
+    position: sticky; top: 0; z-index: 10; margin: 20px -20px 0; padding: 10px 20px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  nav.toc a {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  nav.toc a:hover { color: var(--fg); background: var(--accent-soft); }
+  nav.toc a.active { color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+
+  section.sec { margin-top: 52px; }
+  .sec-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .sec-chip {
+    font-size: 12.5px; color: var(--accent); background: var(--accent-soft);
+    padding: 2px 10px; border-radius: 999px; font-weight: 500; flex: none;
+  }
+  .sec-head h2 { font-size: 21px; margin: 0; }
+  .goal {
+    color: var(--muted); font-size: 13.5px; margin: 4px 0 18px;
+    padding-left: 10px; border-left: 3px solid var(--accent);
+  }
+  h3 { font-size: 17px; margin: 30px 0 8px; }
+  h4 { font-size: 15.5px; margin: 22px 0 6px; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 24px; }
+  li { margin: 4px 0; }
+  code { background: var(--code-bg); border-radius: 5px; padding: 1px 6px; font-size: .88em; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+  }
+  pre code { background: none; padding: 0; }
+  strong { font-weight: 600; }
+  .hook {
+    background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 14px;
+  }
+  .hook .hook-tag { color: var(--accent); font-weight: 500; margin-right: 6px; }
+  .note {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; margin: 14px 0; font-size: 14px;
+  }
+  .note .note-tag { color: #d97706; font-weight: 500; margin-right: 6px; }
+  @media (prefers-color-scheme: dark) { .note .note-tag { color: #fbbf24; } }
+  .task {
+    background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--ok);
+    border-radius: 10px; padding: 12px 16px; margin: 14px 0; font-size: 14px;
+  }
+  .task .task-tag { color: var(--ok); font-weight: 500; margin-right: 6px; }
+  .task ol, .task ul { margin: 6px 0 0; }
+
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  tr:last-child td { border-bottom: none; }
+  .tbl-wrap { overflow-x: auto; }
+  td:first-child { white-space: nowrap; font-weight: 500; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin: 14px 0; }
+  .pcard { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; font-size: 14px; }
+  .pcard h4 { margin: 0 0 6px; font-size: 15px; }
+  .pcard ul { padding-left: 18px; margin: 4px 0; }
+
+  .diagram { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px; margin: 14px 0; }
+  .diagram svg { width: 100%; height: auto; display: block; }
+  .diagram .d-cap { text-align: center; color: var(--muted); font-size: 13px; margin-top: 8px; }
+
+  details.qa {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 4px 18px; margin: 10px 0;
+  }
+  details.qa summary { cursor: pointer; font-weight: 500; padding: 10px 0; }
+  details.qa .ans { color: var(--muted); font-size: 14px; border-top: 1px dashed var(--border); padding: 8px 0 14px; }
+  details.qa .ans b { color: var(--fg); font-weight: 500; }
+
+  footer.doc {
+    margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 12.5px;
+  }
+  footer.doc a { color: var(--muted); }
+  @media print { nav.toc { display: none; } body { background: #fff; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>06 · LLM 应用开发（TS 主场）—— 7 节详解</h1>
+  <div class="meta">对应大纲 <b>6.1 – 6.7</b> · 深度 <b>【精】</b> · 快照日期 <b>2026-11-05</b></div>
+  <div class="usage">
+    <b>从这章起，前五章的所有零件开始组装。</b>你在 first-call 手搓过的一切——messages、SSE 拆信封、tools 四步循环、Zod 自愈——将在 6.3 被 AI SDK 一次抽象掉；<b>正因为手搓过，你才知道 SDK 每个抽象替你挡了什么</b>（这是本课程坚持"先裸写后框架"的全部理由）。本章产出（聊天 Web 应用 + 模型选型结论）= 毕业项目 M1 的直接零件。6.1/6.2 大半是你已亲手做过的旧知识，快速过；6.3 是新的主战场。
+  </div>
+</header>
+
+<nav class="toc" aria-label="目录">
+  <a href="#s61">6.1 协议与错误码</a>
+  <a href="#s62">6.2 流式与前端 UX</a>
+  <a href="#s63">6.3 Vercel AI SDK</a>
+  <a href="#s64">6.4 应用形态</a>
+  <a href="#s65">6.5 成本与延迟</a>
+  <a href="#s66">6.6 选型与思考模式</a>
+  <a href="#s67">6.7 可靠性工程</a>
+  <a href="#s-out">产出</a>
+  <a href="#s99">自检</a>
+</nav>
+
+<!-- ================================================================ -->
+<section class="sec" id="s61">
+  <div class="sec-head"><span class="sec-chip">6.1</span><h2>API 接口规范与 SDK</h2></div>
+  <div class="goal">验收：错误码四大家族各代表什么？"换模型只改 base_url 和 key"的边界在哪？SDK 封装的和没封装的是什么？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>这一节 80% 是复习：messages / usage / tool_calls / finish_reason / SSE 你全在 first-call 里见过真身。新东西只有一样：<b>错误码的系统观</b>——以及一个重要的认知：HTTP 协议和 SDK 是两层东西，SDK 不改变协议，只是替你说了你想说的话。</div>
+
+  <h3>你已掌握的协议骨架（第一轮快速过）</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>协议件</th><th>你亲手见过它的地方</th><th>一句话</th></tr>
+    <tr><td><code>messages[]</code></td><td>5.1 动手篡改历史 / 5.4 的 messagesFinal 剧本</td><td>无状态协议下你每轮重建的剧本</td></tr>
+    <tr><td><code>tools[]</code> / <code>tool_calls</code></td><td>5.4 实验台 A/C 区</td><td>说明书 + 意图报文（arguments 是字符串）</td></tr>
+    <tr><td><code>usage</code></td><td>控制台日志 / 4.7 cached_tokens 观察</td><td>计费与缓存的账本</td></tr>
+    <tr><td><code>finish_reason</code></td><td>你集齐了 stop / length / tool_calls 三种</td><td>本轮结束的原因裁决</td></tr>
+    <tr><td><code>response_format</code></td><td>5.3 档 2</td><td>解码层硬约束（劝说不算数，物理才算）</td></tr>
+    <tr><td>SSE 行协议</td><td>first-call.ts 的 split("\n\n")</td><td>到货即完整的小 JSON 序列</td></tr>
+  </table></div>
+
+  <h3>新的：错误码四大家族</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>家族</th><th>典型码</th><th>含义</th><th>你的应对</th></tr>
+    <tr><td>请求不合格</td><td>400 / 422</td><td>你的 JSON 有毛病：字段缺失、prompt 里没"JSON"字样却开了 json_object、schema 超出支持范围</td><td><b>改代码</b>，不该重试（重试也是同样的错）</td></tr>
+    <tr><td>身份/权限</td><td>401 / 403</td><td>Key 错、欠费、模型无权限</td><td><b>改配置</b>，不重试</td></tr>
+    <tr><td>找不到</td><td>404</td><td>base_url 路径错、模型名不存在</td><td>改配置；检查是不是多了/少了 <code>/v1</code></td></tr>
+    <tr><td>限流/过载</td><td>429 / 529</td><td>太快或服务太忙</td><td><b>该重试</b>——指数退避 + 上限（6.7 的主角）</td></tr>
+    <tr><td>服务端错</td><td>500 / 502 / 503</td><td>厂商那边炸了</td><td>少量重试 + 降级预案（换模型/换厂商）</td></tr>
+  </table></div>
+  <div class="note"><span class="note-tag">📝 判断口诀</span><b>4 字头除了 429 都不该重试</b>（你的错，重试还是错）；<b>429 和 5 字头才值得重试</b>（世界的错，等等会好）。错误体里的 JSON（如 DeepSeek 的 <code>error.message</code>）通常直接说了人话——你 5.4 里见过 <code>messages[0].content: invalid unicode</code> 这种，读它比猜快。</div>
+
+  <h3>"换模型只改 base_url 和 key"的边界</h3>
+  <p>OpenAI 兼容协议让你在 DeepSeek / 智谱 / 硅基流动 / OpenRouter 之间迁移几乎零成本——<b>但兼容的是协议形状，不是全部能力</b>。踩过的和将踩的边界：</p>
+  <ul>
+    <li>✅ 真零成本：chat/completions 主干、messages/temperature/max_tokens/usage</li>
+    <li>⚠️ 名同实异：<code>json_schema</code> 支持度、reasoning 参数名（<code>reasoning_effort</code> / <code>thinking</code> / <code>enable_thinking</code> 各家不同）、多模态字段</li>
+    <li>❌ 不兼容：embedding 模型名、专用端点（如 DeepSeek 的 FIM 补全）、各家独有参数</li>
+  </ul>
+  <p>你亲历过的实例：请求 deepseek-chat 返回 model:deepseek-flash（服务端静默映射）——<b>兼容协议下"模型名"只是个请求字符串，响应里的 model 才是真相</b>。跨厂商迁移时，上线前先跑一遍你的核心用例做冒烟测试。</p>
+
+  <h3>SDK 是什么，不是什么</h3>
+  <p>SDK（openai 官方包、各家 SDK、Vercel AI SDK）= <b>替你处理 HTTP 细节和类型</b>的客户端库：拼请求、流式解析、错误归类、TS 类型。它<b>不改变协议</b>——你在 first-call 手搓的每个字节它都在帮你拼，只是你看不见了。<b>什么时候值得上 SDK</b>：写正式应用（第 6 章开始，永远）。<b>什么时候裸 fetch 更好</b>：学习协议（你已完成）、排查问题（剥掉中间层看真相）。</p>
+
+  <div class="task"><span class="task-tag">🔧 动手 6.1（轻量，15 分钟）</span>错误码冒烟测试——故意制造三种错误，在控制台或 curl 里看错误体的样子：
+    <ol>
+      <li><b>401</b>：Authorization 换成 <code>Bearer sk-wrong</code> → 读错误体里的提示</li>
+      <li><b>400</b>：<code>response_format: {type:"json_object"}</code> 但 prompt 里不含"JSON"字样 → 印证 5.3 的坑</li>
+      <li><b>404</b>：model 写成 <code>deepseek-nonexist</code> → 看模型名错误长什么样</li>
+    </ol>
+    观察：哪些错误体给了人话？哪些只有干巴巴的码？把你下次排查时会先看的字段记进笔记。
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s62">
+  <div class="sec-head"><span class="sec-chip">6.2</span><h2>流式输出与前端 UX</h2></div>
+  <div class="goal">验收：流式的 UX 价值有数据支撑吗？前端渲染流式的三个工程问题是什么？流式下怎么拿结构化数据？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>流式的原理你全懂了（SSE 信封、到货即完整的小 JSON、ndjson 翻译）——这节讲你还没碰过的那半：<b>拿到 delta 之后，前端怎么把它变成好的体验</b>。这是 2.3 埋的"为什么 EventSource 不够用"的正式回收。</div>
+
+  <h3>流式的 UX 价值：先说数字</h3>
+  <p>流式<b>不减少总耗时</b>（同样的 token，同样的生成速度）——它改变的是<b>首字时间 TTFT（Time To First Token）</b>：非流式要等全部生成完（长回答 10~30 秒），流式 1~2 秒内见到第一个字。<b>感知心理学</b>：用户对着"空白页等 20 秒"会走，对着"逐字打出来的答案"愿意等完——可感知进度就是一切。另一个硬好处：<b>长回答可以边生成边读</b>，用户可能在第 3 秒就得到答案，直接打断后续生成（省 token 也省时间）。</p>
+
+  <h3>前端渲染流式的三个工程问题</h3>
+  <div class="cards">
+    <div class="pcard">
+      <h4>① 怎么收：EventSource 够吗</h4>
+      <ul>
+        <li>原生 <code>EventSource</code> 只支持 GET——LLM 请求是 POST 大 body，<b>不够</b></li>
+        <li>方案：<code>fetch</code> + ReadableStream 手拆（你在 first-call 干过）；或 <code>@microsoft/fetch-event-source</code> 库（支持 POST/自定义头/自动重连）</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <h4>② 怎么显示：增量拼接与 Markdown</h4>
+      <ul>
+        <li>delta 逐个 append 到 state（React 里注意<b>别每 delta 一次 setState 重渲染全树</b>——用 ref 攒批，requestAnimationFrame 合并刷新）</li>
+        <li><b>Markdown 半截渲染闪烁</b>：收到一半的 <code>```代码块</code>、没闭合的表格会渲染成乱apa——对策：节流重渲染（每 100ms 一次）+ 渲染前"补全"未闭合标记</li>
+        <li>光标跟随：尾部加 <code>▍</code> 光标，完成后移除</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <h4>③ 怎么停：中断与恢复</h4>
+      <ul>
+        <li>用户点"停止"→ <code>AbortController.abort()</code> 取消 fetch——上游 SSE 断开，已生成的 token 保留（计费已产生）</li>
+        <li>断线恢复：SSE 的 <code>id:</code> 行 + <code>Last-Event-ID</code> 头（你在 6.1 的 SSE 标准里见过）——但 LLM API 一般不支持续传，断了就重发</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>流式下怎么拿结构化数据（5.3 的流式续篇）</h3>
+  <p>结构化输出 + 流式 = 一个新问题：<b>JSON.parse 要等完整文档，而流式的意义就是不等</b>。三个解法，按需选用：</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>解法</th><th>做法</th><th>适用</th></tr>
+    <tr><td>不用流式</td><td>结构化输出直接非流式（反正程序消费，TTFT 无意义）</td><td><b>多数情况——机器吃 JSON 不需要打字机效果</b></td></tr>
+    <tr><td>流式 + 尾端 parse</td><td>流式收完在 done 时一次性 parse（用户看到 JSON 逐字出现）</td><td>调试/透明化场景（你的实验台就是这个）</td></tr>
+    <tr><td>部分 JSON 解析</td><td><code>partial-json</code> 类库：解析"到目前为止合法的前缀"，边流边出部分对象</td><td>前端要展示渐进填充的结构（表格逐行出现）</td></tr>
+  </table></div>
+  <p><b>关键认知</b>：流式的价值在<b>人看</b>；<b>程序吃</b>的输出（Agent 决策、提取器）默认非流式——省掉整个 SSE 层的复杂度。你的 Agent 桌面应用里，唯一值得流式的是聊天窗口本身。</p>
+
+  <div class="task"><span class="task-tag">🔧 动手 6.2</span>在 first-call 控制台里做一次"中断实验"：发起一个长回答的流式请求，生成到一半点浏览器停止按钮（或关页面）→ 观察 server.ts 日志里收到多少 chunk 后断开 → 回答两个问题：①已生成的 token 计费了吗（对照 usage，若没收到 usage 块说明上游也断了）？②再次请求时，历史里该放这条残缺回答吗？（提示：assistant 半截话进历史，模型会接着它的语气续——有时正是你想要的，有时是坑。）
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s63">
+  <div class="sec-head"><span class="sec-chip">6.3</span><h2>Vercel AI SDK —— 本章主战场</h2></div>
+  <div class="goal">验收：streamText/generateObject/tool/useChat 各替你抽象了什么（对照你手搓过的代码）？动手：聊天 Web 应用跑起来。</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>AI SDK 是 TS 生态事实标准的 LLM 前端/全栈库。学它的正确姿势不是读文档从头到尾，而是<b>逐个对照你手搓过的代码</b>——每个 API 都回答同一个问题："这个替我干了哪段我写过的苦活？"</div>
+
+  <h3>四大件对照表（你的手搓 → SDK 的一行）</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>你手搓过（first-call）</th><th>苦活</th><th>AI SDK 的替代</th><th>还剩给你做的</th></tr>
+    <tr><td>fetch + Authorization + body 拼装 + res.json()</td><td>HTTP 细节、类型</td><td><code>generateText({ model, messages })</code></td><td>选模型、写 prompt</td></tr>
+    <tr><td>getReader + split("\n\n") + 剥 "data: " + 逐块 JSON.parse + delta 拼接</td><td>SSE 全套</td><td><code>const { textStream } = await streamText(...); for await (const delta of textStream)</code></td><td>拿到 delta 后的 UI</td></tr>
+    <tr><td>tools 说明书 + 四步 for 循环 + JSON.parse(arguments) + role:"tool" 回喂 + MAX_ROUNDS</td><td>Agent Loop 骨架</td><td><code>maxSteps</code> 一行：<code>generateText({ tools, maxSteps: 5 })</code>——SDK 在内部跑完整循环</td><td><b>工具的执行函数</b>（execute）</td></tr>
+    <tr><td>Zod schema + response_format + safeParse + self-heal 重试</td><td>结构化输出三层</td><td><code>generateObject({ schema: MeetingSchema })</code>——Zod 自动转 JSON Schema、自动重试</td><td>写 schema（你已会）</td></tr>
+    <tr><td>（还没有）React 聊天组件</td><td>输入框/消息列表/流式渲染/停止按钮</td><td><code>useChat()</code> hook</td><td>样式与交互定制</td></tr>
+  </table></div>
+  <p>看清楚一件事：<b>SDK 抽掉的全是"协议搬运"苦活，没抽掉的是"决策"——选什么模型、schema 怎么设计、工具给哪些、失败怎么办</b>。第 5 章教的就是这些没被抽掉的东西。</p>
+
+  <h3>核心 API 速写（真实代码，注释标出对应你写过的哪段）</h3>
+  <pre><code>import { generateText, streamText, generateObject, tool } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { z } from "zod";
+
+const deepseek = createOpenAI({
+  baseURL: "https://api.deepseek.com/v1",  // ← 就是你的 LLM_BASE_URL（注意有的厂商要 /v1）
+  apiKey: process.env.LLM_API_KEY,
+});
+
+// ① 非流式 = 你 first-call.ts 的 main 干的事
+const { text, usage, finishReason } = await generateText({
+  model: deepseek("deepseek-chat"),
+  system: "你是助手",                        // ← 5.1：system 是你的代码注入的
+  prompt: "你好",
+});
+
+// ② 流式 = 你 server.ts SSE 翻译器干的事，现在一个 for-await
+const { textStream } = await streamText({ model: deepseek("deepseek-chat"), prompt: "讲个故事" });
+for await (const delta of textStream) process.stdout.write(delta);
+
+// ③ 结构化 = 你 meeting-notes.ts 的 tidy() 干的事（含自动重试）
+const { object } = await generateObject({
+  model: deepseek("deepseek-chat"),
+  schema: z.object({ title: z.string(), items: z.array(z.object({ owner: z.string() })) }),
+  //   ↑ Zod 直接传！SDK 自动转 JSON Schema 给模型（5.3 的"两份 schema 手写两遍"问题被消灭）
+  prompt: "整理这份笔记：…",
+});
+object.items[0].owner; // 类型安全，无需 safeParse（SDK 保证）
+
+// ④ 工具循环 = 你 5.4 实验台的 runAgent() 干的事
+const result = await generateText({
+  model: deepseek("deepseek-chat"),
+  prompt: "帮我看看 todo.md",
+  tools: {
+    read_file: tool({
+      description: "读取 data/ 目录下的文本文件",          // ← 5.4 的说明书
+      parameters: z.object({ filename: z.string() }),      // ← Zod 代替手写 JSON Schema
+      execute: async ({ filename }) => {                   // ← 5.4 的 execReadFile（白名单在这里！）
+        return readFileSync(path.join("data", path.basename(filename)), "utf8");
+      },
+    }),
+  },
+  maxSteps: 5,   // ← 5.4 的 MAX_ROUNDS 保险丝：SDK 内部跑 5.4 的整个 for 循环
+});</code></pre>
+
+  <h3>useChat：前端聊天组件的最后一公里</h3>
+  <p><code>useChat</code>（React hook）把聊天 UI 的状态机全包了：<code>messages</code>（自动维护的历史=你的剧本）、<code>sendMessage</code>、<code>stop</code>（=你的 AbortController）、<code>status</code>（streaming/ready）、<code>data</code>。配 AI SDK 的服务端路由（Next.js App Router 里 <code>toUIMessageStreamResponse()</code>），一个能用的聊天界面 50 行以内。<b>你手搓过的每个环节都能在它的源码里找到对应物</b>——现在读它的文档你会有"哦这就是我干过的那个"的熟悉感。</p>
+
+  <div class="note"><span class="note-tag">📝 版本提醒</span>AI SDK 迭代快，API 名会变（v4→v5 改过 useChat 的消息结构、generateText 的返回字段）。本文快照 2026-11，<b>动手时以 ai-sdk.dev 当前文档为准</b>——但抽象层级和四大件的概念结构是稳定的，API 名变化不影响你已理解的心智模型。</div>
+
+  <div class="task"><span class="task-tag">🔧 动手 6.3（README 指定 · 本章主产出）</span>聊天 Web 应用：Next.js + AI SDK，流式 + 工具。这是毕业项目 M1 的地基，做慢点没关系，做扎实：
+    <ol>
+      <li><b>脚手架</b>：<code>npx create-next-app@latest chat-app --typescript --app</code> → <code>npm i ai @ai-sdk/openai zod</code>；工程放 <code>实验/chat-app/</code>（长期项目待遇，和 first-call 平级）</li>
+      <li><b>服务端路由</b>：<code>app/api/chat/route.ts</code>——用 <code>streamText</code> + <code>toUIMessageStreamResponse()</code>；模型用 createOpenAI 指向你的 DeepSeek 配置（沿用 .env 的思路，Key 走 <code>process.env</code>，<b>只在服务端，永不进浏览器</b>——你 5.3 学到的原则）</li>
+      <li><b>前端页面</b>：<code>useChat</code> + 消息列表 + 输入框 + 停止按钮，先别管样式，能流式打字就行</li>
+      <li><b>加一个工具</b>：把 5.4 的 read_file（白名单 data/）搬进 route.ts 的 tools + <code>maxSteps: 5</code>——你的聊天应用立刻能读文件</li>
+      <li><b>验收三连</b>：流式逐字出现 ✓ / 停止按钮立刻中断 ✓ / "帮我看看 todo.md"能触发工具并总结 ✓</li>
+    </ol>
+    卡在任何一步直接说，我来搭。想先看成品再自己动手也可以——说一声我把最小版搭好，你对着改。
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s64">
+  <div class="sec-head"><span class="sec-chip">6.4</span><h2>应用形态：聊天 / 副驾 / 工作流嵌入</h2></div>
+  <div class="goal">验收：三种形态的本质区别？毕业项目属于哪种（这决定你后面章节的取舍）？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>"做个 AI 应用"太粗了——形态决定架构：消息流是谁的、上下文从哪来、失败怎么兜底。选错形态，后面全歪。</div>
+
+  <div class="tbl-wrap"><table>
+    <tr><th>形态</th><th>交互模型</th><th>上下文构成</th><th>典型例子</th><th>核心难点</th></tr>
+    <tr><td><b>聊天 Chat</b></td><td>人发消息→模型回→多轮往复</td><td>对话历史为主</td><td>ChatGPT、客服机器人</td><td>长对话管理（5.5 压缩三板斧）</td></tr>
+    <tr><td><b>副驾 Copilot</b></td><td>嵌入工作流，人在环边</td><td><b>用户正在操作的上下文</b>（当前文件/选中段落/页面）+ 少量对话</td><td>GitHub Copilot、光标处补全、Notion AI</td><td>上下文采集与注入（把"你在干嘛"翻译给模型）</td></tr>
+    <tr><td><b>工作流嵌入 Workflow</b></td><td>程序调用模型，人只在端点</td><td>任务专属构造（模板+检索+工具）</td><td>简历解析器、内容审核管道、Agent 的中间步骤</td><td>结构化输出与可靠性（5.3/6.7）</td></tr>
+  </table></div>
+
+  <h3>毕业项目是哪种？—— 三种都是，分层看</h3>
+  <p>你的 Agent 桌面应用<b>不是一个形态，是三层形态的叠加</b>：</p>
+  <ul>
+    <li><b>外壳是聊天</b>：用户和 Agent 对话（6.3 的聊天应用直接升级）</li>
+    <li><b>内核是工作流嵌入</b>：Agent 每一轮内部——模型决策（结构化输出）、工具执行、失败重试——全是程序↔模型的机器对话，用户看不见（5.4/6.3 的 tools + maxSteps）</li>
+    <li><b>增强靠副驾</b>：感知用户当前在桌面干什么（活动窗口、剪贴板、打开的文件）注入上下文——这是副驾形态的"上下文采集"，Electron 能做而网页做不了的事</li>
+  </ul>
+  <p><b>对本章的指导意义</b>：6.3 的聊天应用 = 外壳先行；但 route.ts 里已经放 tool + maxSteps——内核的种子从第一天就种进去。不要做成"纯聊天然后重构"，要做成"聊天壳里长着 Agent 的心脏"。</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s65">
+  <div class="sec-head"><span class="sec-chip">6.5</span><h2>成本与延迟工程</h2></div>
+  <div class="goal">验收：prompt caching 的省法与条件？模型路由按什么分流？上下文瘦身从哪几刀下手？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>上线前成本是"哦价格表看看"，上线后是"每天账单盯着你"。三个杠杆，每个都你已经有体感基础。</div>
+
+  <h3>杠杆一：Prompt Caching（你亲眼见过 cached_tokens）</h3>
+  <ul>
+    <li><b>机制</b>：前缀逐字节相同的请求，命中缓存的部分按 1/10 左右计费（各家不同）+ 显著降低 TTFT（不用重新算 KV）</li>
+    <li><b>条件苛刻</b>：从头开始逐 token 相同才命中——<b>system 固定、tools 固定、few-shot 固定，放前面不动</b>；任何"今天日期""当前状态"混进前缀，缓存全灭（5.5 的排列黄金法则的成本学版本）</li>
+    <li><b>你的数据</b>：4.7 实验里你观察过第二次请求 cached_tokens 的跳变——那就是这个机制</li>
+    <li>DeepSeek 还有硬盘缓存（自动、无标记）；OpenAI 是 <code>prompt_cache_key</code>；Anthropic 显式 <code>cache_control</code> 断点——细节各家不同</li>
+  </ul>
+
+  <h3>杠杆二：模型路由（按任务分流，别一律用旗舰）</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>任务类型</th><th>模型档位</th><th>理由</th></tr>
+    <tr><td>闲聊、格式转换、简单分类</td><td>便宜快速档（deepseek-chat 级）</td><td>旗舰的智力是浪费</td></tr>
+    <tr><td>复杂推理、规划、Agent 决策</td><td>推理档（flash/reasoning 级）</td><td>4.9：值得用推理的场景=想的比写的多</td></tr>
+    <tr><td> embedding / 批量处理</td><td>专用便宜模型 + 批处理接口（半价）</td><td>对延迟不敏感的任务换价格</td></tr>
+  </table></div>
+  <p>实现可以很简单：<code>const model = task.difficulty === "hard" ? expensive : cheap;</code>——一个 if 就是路由器。进阶才做"小模型先判断难度再分流"（那本身也是一次调用，别过度工程）。</p>
+
+  <h3>杠杆三：上下文瘦身（5.5 的工程化复述）</h3>
+  <ul>
+    <li>历史压缩（截断/摘要/结构化记忆）——5.5 三板斧直接用</li>
+    <li>工具结果剪枝：老的工具输出替换成一句话摘要（5.5 Anthropic 长文的 compaction）</li>
+    <li>few-shot 瘦身：示例 2 个够就不放 5 个（每个示例每轮都在重发，除非吃到缓存）</li>
+    <li>工具数量克制：每挂一个 tool，说明书 token 常驻每一轮</li>
+  </ul>
+
+  <div class="task"><span class="task-tag">🔧 动手 6.5（轻量）</span>在 6.3 的聊天应用（或控制台）里实测缓存经济学：固定 system（≥200 token 的规则文本）连发 5 次 → 记录每次 prompt_tokens / cached_tokens / 费用变化；然后每轮往 system 里追加一个变化的时间戳再发 5 次 → 看缓存全灭。两张表记进笔记，这就是你将来给老板讲成本的素材。
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s66">
+  <div class="sec-head"><span class="sec-chip">6.6</span><h2>模型选型与思考模式</h2></div>
+  <div class="goal">验收：选型的五个维度怎么权衡？何时开推理模型、effort 给多少？产出：毕业项目候选模型清单。</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>你已经用 body 摸过 flash（reasoning 吃光 max_tokens 那次）和 chat 的差别——这节把那种"体感"升级成"决策框架"。选型不是选"最好的模型"，是<b>给你的任务光谱配一排合适的模型</b>。</div>
+
+  <h3>五个维度</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>维度</th><th>看什么</th><th>你的体感来源</th></tr>
+    <tr><td>能力</td><td>你的任务实测 &gt; 榜单（通用 benchmark ≠ 你的场景）；LMArena / 各家发布页</td><td>5.2 对照实验：同一任务不同 prompt 档位表现差多少</td></tr>
+    <tr><td>成本</td><td>每 1M token 价格 × 你的调用量；输入输出分开算（输出贵 3~5 倍）</td><td>usage 字段你天天看</td></tr>
+    <tr><td>延迟</td><td>TTFT + 吞吐；推理模型的思考时间是大头</td><td>控制台的耗时列</td></tr>
+    <tr><td>上下文长度</td><td>窗口大小 × 价格随长度的跳档；实际有效长度 often 低于标称</td><td>4.7 窗口概念</td></tr>
+    <tr><td>推理能力</td><td>要不要"想"？想的成本（reasoning_tokens 也计费！）</td><td>deepseek-flash 吃光 200 max_tokens 那次</td></tr>
+  </table></div>
+
+  <h3>思考模式：什么时候开、开多大</h3>
+  <p>4.9 的结论直接复用：<b>值得开推理模型的任务 = "需要想的"显著超过"需要写的"</b>——数学、规划、Agent 的决策步、复杂调试。<b>不值得</b>：翻译、抄写、格式转换、闲聊（思考是纯浪费）。</p>
+  <ul>
+    <li><b>思考预算（effort）</b>：OpenAI 系 <code>reasoning_effort: "low"|"medium"|"high"</code>；Anthropic <code>budget_tokens</code>；DeepSeek 系列多为自动（部分模型支持 <code>max_tokens</code> 内划分）。<b>给多少</b>：从 low 起，只在实测答不对时升级——high 的延迟和费用经常是 low 的数倍</li>
+    <li><b>Agent 场景的坑</b>（你 5.4 会碰到的）：推理模型的思考也占上下文——每轮决策都思考的 Agent，token 消耗可能 3~5 倍于普通模型。<b>常见架构： Agent 的"规划步"用推理模型（一次想清楚），"执行步"用普通模型（照办就行）</b>——这就是 6.5 模型路由在 Agent 内部的应用</li>
+    <li><b>你环境里的现实</b>：你的 Key 现在被路由到 deepseek-flash——推理模型。做 6.3 聊天应用时注意：闲聊场景思考是浪费，观察 TTFT；如果体验太肉，看看你的厂商有没有非推理档可切</li>
+  </ul>
+
+  <div class="task"><span class="task-tag">🔧 动手 6.6（README 指定产出）</span>给毕业项目列 2–3 个候选模型 + 理由。模板（写进本章笔记）：
+    <pre><code>任务光谱：聊天壳（闲聊+文件问答） / Agent 决策（规划+工具选择） / 批量处理（笔记整理）
+
+候选 1：deepseek-chat 级（便宜快档）—— 用于：聊天壳日常对话 + 批量整理
+  理由：…/ 价格：…输入+…输出 / 上下文：…128K
+候选 2：deepseek-flash / reasoning 级 —— 用于：Agent 规划决策步
+  理由：… / 思考成本实测：…
+候选 3：（可选）备用厂商 —— 用于：降级预案（6.7）
+  理由：协议兼容，切 base_url 即用
+
+结论：路由规则 = 如果…用候选1；如果…用候选2；失败降级到候选3。</code></pre>
+    价格以各家定价页当期为准；"实测你自己的任务"比任何榜单都算数——拿 5.2 的对照实验思路，用你真实要做的任务测。
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s67">
+  <div class="sec-head"><span class="sec-chip">6.7</span><h2>可靠性工程【浅】</h2></div>
+  <div class="goal">验收（了解级）：四件套各防什么？指数退避是什么？为什么 LLM 应用比普通应用更需要降级预案？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>你已经撞过的：网络超时（curl 那次）、finish_reason: length（思考吃光预算）。可靠性工程就是把"撞过才知道"变成"设计时就防"。</div>
+
+  <div class="tbl-wrap"><table>
+    <tr><th>四件套</th><th>防什么</th><th>做法一句话</th></tr>
+    <tr><td>超时</td><td>请求挂死占住资源</td><td>fetch 的 AbortSignal.timeout（你已在用：60s）；流式单独给"首字节超时"（TTFT 卡死检测）</td></tr>
+    <tr><td>重试</td><td>瞬时失败（429/5xx/网络抖动）</td><td><b>指数退避 + 抖动 + 上限</b>：1s→2s→4s（加随机抖动防惊群），最多 3 次就放弃。4 字头非 429 不重试（6.1 口诀）</td></tr>
+    <tr><td>限流</td><td>你把厂商打爆 / 被厂商打回</td><td>客户端令牌桶限速 + 读 429 响应头里的 <code>retry-after</code> 照办</td></tr>
+    <tr><td>降级</td><td>主力模型不可用</td><td>失败 N 次自动切备用模型/厂商（OpenAI 兼容协议的价值时刻：换 base_url 就切）+ 给用户的提示从"报错堆栈"变"稍后再试/已切换备用通道"</td></tr>
+  </table></div>
+
+  <div class="note"><span class="note-tag">📝 为什么 LLM 应用更要降级</span>普通应用的依赖（数据库/缓存）99.9% 可用性很正常；LLM API 的<b>单模型可用性和延迟波动远大于传统依赖</b>（过载、区域故障、静默限流），且你无法自愈只能等——所以"备用通道"不是奢侈是标配。你已经在实践了：你的厂商把请求静默路由到另一个模型名，某种意义上就是厂商层面的降级。</div>
+
+  <div class="task"><span class="task-tag">🔧 动手 6.7（可选，了解即可）</span>在 6.3 聊天应用的 route.ts 里加一层最小重试：包一个 <code>withRetry(fn, 3)</code>——捕获 429/5xx，指数退避重试，其余错误直接抛。20 行以内。感受"重试逻辑住在 SDK 外面还是里面"的取舍（AI SDK 部分provider自带重试，自己包一层也是常见实践）。
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s-out">
+  <div class="sec-head"><span class="sec-chip">产出</span><h2>本章产出（README 指定）</h2></div>
+  <div class="goal">两件：聊天 Web 应用（可演示）+ 模型选型结论。它们直接构成毕业项目 M1。</div>
+  <ol>
+    <li><strong>聊天 Web 应用</strong>：6.3 的 Next.js + AI SDK 应用——流式 ✓ 停止 ✓ 工具（read_file）✓。落位 <code>实验/chat-app/</code>，可演示可迭代。M1 达成线：别人坐下来能用它聊天，且它能读 data/ 里的文件回答问题。</li>
+    <li><strong>模型选型结论</strong>：6.6 模板填完——任务光谱、每档候选模型、路由规则、降级预案。</li>
+  </ol>
+  <p>想做但不想从零搭脚手架？随时说一声，我来搭最小骨架你对着改。</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s99">
+  <div class="sec-head"><span class="sec-chip">附录</span><h2>自检</h2></div>
+  <div class="goal">全过 + 🔧 动手做完 → 勾掉 6.1–6.7 与本章产出。</div>
+
+  <details class="qa"><summary>Q1（6.1）错误码四大家族？哪些该重试？</summary>
+    <div class="ans">400/422 请求不合格（改代码）、401/403 身份权限（改配置）、404 找不到（改配置查 /v1）、429/529 限流过载（<b>重试</b>）、5xx 服务端（少量重试+降级）。口诀：<b>4 字头除 429 不重试</b>——你的错重试还是错。</div>
+  </details>
+  <details class="qa"><summary>Q2（6.1）"换模型只改 base_url 和 key"的边界？</summary>
+    <div class="ans">兼容的是协议形状不是能力全集：主干对话零成本；json_schema/reasoning 参数名/多模态各家名同实异；embedding 与专有端点不兼容。响应体 model 字段才是真相（你可能被静默路由）。</div>
+  </details>
+  <details class="qa"><summary>Q3（6.2）流式的 UX 价值本质是什么？</summary>
+    <div class="ans">不减总时长，减<b>首字时间 TTFT</b>（30s 空白 → 2s 出字）——可感知进度决定用户去留；且长回答可边读边打断（省 token）。价值属于"人看"的场景。</div>
+  </details>
+  <details class="qa"><summary>Q4（6.2）流式 + 结构化输出怎么调和？</summary>
+    <div class="ans">程序吃 JSON 不需要打字机效果——<b>默认非流式</b>；要透明就流式+尾端 parse（实验台做法）；要渐进填充才用 partial-json。你的 Agent 应用里只有聊天窗口值得流式。</div>
+  </details>
+  <details class="qa"><summary>Q5（6.3）AI SDK 四大件各替你抽了什么、没抽什么？</summary>
+    <div class="ans">generateText=HTTP 拼装；streamText=SSE 全套；generateObject=Zod→JSON Schema+校验+重试（消灭 5.3 两份 schema）；tools+maxSteps=5.4 整个 for 循环。<b>没抽</b>：选模型、schema 设计、工具选择、失败策略——第 5 章教的正是这些。</div>
+  </details>
+  <details class="qa"><summary>Q6（6.3）为什么说"手搓过才学得会 SDK"？</summary>
+    <div class="ans">SDK 抽象的是协议搬运苦活，出问题时你必须知道它底下在干什么才能排查（arguments 是字符串、SSE 边界、system 谁注入……）。抽象是租金，理解是本金——你已付过本金。</div>
+  </details>
+  <details class="qa"><summary>Q7（6.4）三种形态的本质区别？毕业项目怎么落位？</summary>
+    <div class="ans">聊天=人驱动对话（历史为主）；副驾=上下文来自"用户正在做的事"；工作流=程序调用模型、人只在端点（结构化+可靠性是命门）。毕业项目三层叠加：<b>外壳聊天 + 内核工作流（Agent 循环）+ 副驾式桌面上下文采集</b>。</div>
+  </details>
+  <details class="qa"><summary>Q8（6.5）prompt caching 的条件与排列法则？</summary>
+    <div class="ans">前缀逐 token 相同才命中（system/tools/few-shot 固定放前）；任何变化内容混进前缀缓存全灭。<b>稳定的放前面，易变的放后面</b>——5.5 法则的成本学版本。</div>
+  </details>
+  <details class="qa"><summary>Q9（6.6）何时开推理模型？effort 怎么给？Agent 内部怎么用？</summary>
+    <div class="ans">想的比写的多的任务（规划/数学/Agent 决策）开；翻译抄写闲聊不开。effort 从 low 起步实测不够再升。Agent 内部：<b>规划步用推理模型、执行步用普通模型</b>（思考 token 也计费，全开 3~5 倍成本）。</div>
+  </details>
+  <details class="qa"><summary>Q10（6.7）重试的完整规则？为什么 LLM 应用必须降级预案？</summary>
+    <div class="ans">只重试 429/5xx/网络错；指数退避+抖动+上限（如 1s/2s/4s 最多 3 次）；读 retry-after。LLM API 波动远超传统依赖且你无法自愈——降级（切备用模型/厂商）是标配不是奢侈，OpenAI 兼容协议让"切 base_url"成本趋零。</div>
+  </details>
+
+  <h3>延伸资源（README 指定，按优先级）</h3>
+  <ul>
+    <li><a href="https://ai-sdk.dev/docs">Vercel AI SDK 文档</a>（主教材，TS 一手；API 名以当前版本为准）</li>
+    <li><a href="https://github.com/datawhalechina/llm-universe">Datawhale llm-universe</a>（中文系统课，读它、用 TS 复刻核心章）</li>
+    <li><a href="https://cookbook.openai.com/">OpenAI Cookbook</a>（要具体代码模式时查）</li>
+    <li>你的两个实验台仍是活的参照物：<a href="http://localhost:8787/5.3">/5.3</a>（generateObject 的手搓版）、<a href="http://localhost:8787/5.4">/5.4</a>（tools+maxSteps 的手搓版）——学 SDK 时对照着看</li>
+  </ul>
+</section>
+
+<footer class="doc">
+  <p>快照于 2026-11-05 · 基于本章 README 与仓库《知识大纲.md》v2 · AI SDK API 名与各家参数/价格以官方文档当期为准 · 实验台：<a href="http://localhost:8787/">first-call 控制台</a>（npm run ui）· 本章动手产出落位建议 <code>实验/chat-app/</code>。</p>
+</footer>
+
+</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+    var secs = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+    function highlight() {
+      var cur = 0;
+      secs.forEach(function (s, i) { if (s && s.getBoundingClientRect().top < 120) cur = i; });
+      links.forEach(function (a, i) { a.classList.toggle('active', i === cur); });
+    }
+    window.addEventListener('scroll', highlight, { passive: true });
+    highlight();
+  })();
+</script>
+</body>
+</html>

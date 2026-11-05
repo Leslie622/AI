@@ -14,6 +14,9 @@
 ## 本章笔记
 
 - [5.1–5.6 六节详解（含 Function Calling 四步往返流程卡、lost in the middle U 形曲线 SVG、五段式 prompt 模板、10 题自检区）](./5.1-5.6-Prompt与上下文工程-详解.html) — 自学主文档；5.1/5.2 用 `实验/first-call` 控制台即可完成，5.3/5.4 文档内附完整脚本（沿用同一 .env，5.3 需 `npm i zod`）
+- [5.3 动手实验室：六关卡交互页](./5.3-结构化输出-动手实验室.html) — 离线可玩：两条管道对照 / JSON.parse 验尸 5 样本 / Schema vs Zod 双胞胎 / safeParse 试驾 5 份货 / 自愈循环动画 / 三层方案收拢 + 6 题通关自测
+- 🔧 **5.3 真机实验台：`npm run ui` 后开 [http://localhost:8787/5.3](http://localhost:8787/5.3)** — 走真实 API 的四档对照（裸恳求 → +Schema → +response_format → +Zod 自愈），同一段乱笔记反复跑，观察防线逐层生效；独立 CLI 版为 `实验/first-call/meeting-notes.ts`（已跑通）
+- 🔧 **5.4 真机实验台：[http://localhost:8787/5.4](http://localhost:8787/5.4)** — Function Calling 四步往返全透明：read_file 工具（白名单 data/）+ MAX_ROUNDS 保险丝，每轮完整请求（含 tools 说明书）/完整响应（含 tool_calls 报文）/执行器实况/最终 messages 剧本全部展开；三场景已验证（正题 2 轮 stop、无工具任务、白名单外文件失败回喂）
 
 ## 本章产出
 

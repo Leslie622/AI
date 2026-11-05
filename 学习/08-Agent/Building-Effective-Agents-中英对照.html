@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building Effective Agents · 中英对照精读</title>
+<style>
+  :root {
+    --bg: #f6f6f8; --fg: #1c1c22; --muted: #6d6d7a; --card: #ffffff; --border: #e3e3ea;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --code-bg: #ececf2;
+    --ok: #16a34a; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141419; --fg: #e7e7ee; --muted: #9c9cab; --card: #1d1d26; --border: #2d2d3a;
+      --accent: #8f94f8; --accent-soft: rgba(143, 148, 248, .12); --code-bg: #26262f;
+      --ok: #4ade80; --warn: #fbbf24;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-size: 15.5px; line-height: 1.75; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 20px 80px; }
+  header.top { padding: 44px 0 8px; }
+  header.top h1 { font-size: 25px; margin: 0 0 6px; }
+  header.top .meta { color: var(--muted); font-size: 13px; }
+  .usage { margin-top: 16px; background: var(--accent-soft); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; font-size: 14px; }
+  nav.toc { position: sticky; top: 0; z-index: 10; margin: 20px -20px 0; padding: 10px 20px; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 4px; }
+  nav.toc a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+  nav.toc a:hover { color: var(--fg); background: var(--accent-soft); }
+  section.sec { margin-top: 48px; }
+  .sec-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sec-chip { font-size: 12.5px; color: var(--accent); background: var(--accent-soft); padding: 2px 10px; border-radius: 999px; font-weight: 500; flex: none; }
+  .sec-head h2 { font-size: 21px; margin: 0; }
+  .en { color: var(--muted); font-size: 14px; border-left: 3px solid var(--border); padding-left: 12px; margin: 14px 0 4px; }
+  .zh { margin: 4px 0 20px; }
+  .zh b { font-weight: 600; }
+  .linknote { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--ok); border-radius: 10px; padding: 10px 14px; margin: 6px 0 20px; font-size: 13.5px; }
+  .linknote .tag { color: var(--ok); font-weight: 500; margin-right: 6px; }
+  .keybox { background: var(--card); border: 1px solid var(--accent); border-radius: 12px; padding: 14px 18px; margin: 14px 0; font-size: 14.5px; }
+  .keybox .tag { color: var(--accent); font-weight: 600; margin-right: 6px; }
+  p { margin: 8px 0; }
+  ul { margin: 8px 0; padding-left: 24px; }
+  li { margin: 4px 0; }
+  code { background: var(--code-bg); border-radius: 5px; padding: 1px 6px; font-size: .88em; }
+  strong { font-weight: 600; }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>《Building Effective Agents》中英对照精读</h1>
+  <div class="meta">Anthropic Engineering · 2024-12-19 · Erik S. &amp; Barry Zhang · <a href="https://www.anthropic.com/engineering/building-effective-agents">原文链接</a> · 对照翻译：2026-11-05</div>
+  <div class="usage">
+    <b>用法</b>：灰色英文段 = 原文（可跳过），中文段 = 对照翻译，绿色框 = "与你 8 章所学的连线"——把这篇必读文章钉在你的知识网上。原文含官方流程图（本文不复制图，图示处标"〔图〕"）。开读前提醒：文首 Anthropic 有个更新声明（2026 视角下部分工具生态已变），已译出。
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#s1">1 什么是 Agent</a>
+  <a href="#s2">2 何时用/不用</a>
+  <a href="#s3">3 框架</a>
+  <a href="#s4">4 积木与五模式</a>
+  <a href="#s5">5 组合定制</a>
+  <a href="#s6">6 总结三原则</a>
+  <a href="#a1">附录1 实战</a>
+  <a href="#a2">附录2 工具提示工程</a>
+</nav>
+
+<!-- 声明 -->
+<section class="sec">
+  <div class="en"><p>〔文首更新声明〕Note: Much of the tooling landscape described in this post has changed since December 2024. For our current approach, see how we built Claude Managed Agents and the Managed Agents documentation.</p></div>
+  <div class="zh"><p><b>译注：</b>本文描述的很多工具生态自 2024 年 12 月以来已经发生变化。关于我们当前的方法，参见 Claude Managed Agents 的构建说明与文档。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>这就解释了为什么 8.8 框架五层地图里没有"Managed Agents"——文章发表时它还不存在。读旧经典文章的姿势：读<b>判断</b>（那些不过时），核对<b>工具名</b>（那些常过时）。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s0">
+  <div class="sec-head"><span class="sec-chip">引言</span><h2>开篇</h2></div>
+  <div class="en"><p>Over the past year, we've worked with dozens of teams building large language model (LLM) agents across industries. Consistently, the most successful implementations weren't using complex frameworks or specialized libraries. Instead, they were building with simple, composable patterns.</p>
+  <p>In this post, we share what we've learned from working with our customers and building agents ourselves, and give practical advice for developers on building effective agents.</p></div>
+  <div class="zh"><p>过去一年，我们与数十个跨行业构建大语言模型（LLM）Agent 的团队合作过。<b>始终如一的发现是：最成功的实现并没有使用复杂的框架或专门的库，而是用简单、可组合的模式来构建。</b></p>
+  <p>在这篇文章中，我们分享从客户合作与自身构建中学到的东西，为开发者提供构建有效 Agent 的实用建议。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>"简单、可组合的模式"正是你 8.2 手写 while 循环的哲学背书——这也是为什么你的课程坚持先裸写后框架。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s1">
+  <div class="sec-head"><span class="sec-chip">01</span><h2>什么是 Agent？</h2></div>
+  <div class="en"><p>"Agent" can be defined in several ways. Some customers define agents as fully autonomous systems that operate independently over extended periods, using various tools to accomplish complex tasks. Others use the term to describe more prescriptive implementations that follow predefined workflows. At Anthropic, we categorize all these variations as <b>agentic systems</b>, but draw an important architectural distinction between <b>workflows</b> and <b>agents</b>:</p>
+  <p><b>Workflows</b> are systems where LLMs and tools are orchestrated through predefined code paths.</p>
+  <p><b>Agents</b>, on the other hand, are systems where LLMs dynamically direct their own processes and tool usage, maintaining control over how they accomplish tasks.</p>
+  <p>Below, we will explore both types of agentic systems in detail.</p></div>
+  <div class="zh"><p>"Agent"有多种定义方式。一些客户把 Agent 定义为完全自主的系统——长时间独立运行、使用各种工具完成复杂任务；另一些人用这个词描述更规范化的、遵循预定义工作流的实现。在 Anthropic，我们把所有这些变体统称为<b>智能体系统（agentic systems）</b>，但在架构上做一个重要区分——<b>工作流（workflow）</b>与<b>智能体（agent）</b>：</p>
+  <p><b>工作流</b>：LLM 和工具通过<b>预先定义的代码路径</b>来编排的系统。</p>
+  <p><b>Agent</b>：LLM <b>动态地决定自己的流程和工具使用</b>、自己掌控如何完成任务的系统。</p></div>
+  <div class="keybox"><span class="tag">🔑 一句话拿走</span>判定线 = <b>控制流谁决定</b>。代码编排 = 工作流；模型自主 = Agent。这正是你 8.1 的第一张表——现在你知道它出自这里。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s2">
+  <div class="sec-head"><span class="sec-chip">02</span><h2>何时（何时不）使用 Agent</h2></div>
+  <div class="en"><p>When building applications with LLMs, we recommend finding the simplest solution possible, and only increasing complexity when needed. This might mean not building agentic systems at all. Agentic systems often trade latency and cost for better task performance, and you should consider when this tradeoff makes sense.</p>
+  <p>When more complexity is warranted, workflows offer predictability and consistency for well-defined tasks, whereas agents are the better option when flexibility and model-driven decision-making are needed at scale. For many applications, however, optimizing single LLM calls with retrieval and in-context examples is usually enough.</p></div>
+  <div class="zh"><p>构建 LLM 应用时，我们建议<b>寻找尽可能简单的方案，只在需要时才增加复杂度</b>——这甚至可能意味着完全不构建智能体系统。智能体系统常用延迟和成本换取更好的任务表现，你应当权衡这个交换是否划算。</p>
+  <p>当确实需要更多复杂度时：<b>工作流</b>为定义良好的任务提供可预测性与一致性；<b>Agent</b>则适合需要大规模灵活性与模型驱动决策的场景。而对许多应用来说，<b>用检索和上下文示例优化好单次 LLM 调用，通常就够了</b>。</p></div>
+  <div class="keybox"><span class="tag">🔑 一句话拿走</span>复杂度阶梯：优化单次调用（RAG+示例）→ 工作流 → Agent，<b>能不上就不上</b>。你 8.1 的"泼冷水"和毕业项目的形态判定都源于此。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s3">
+  <div class="sec-head"><span class="sec-chip">03</span><h2>何时以及如何使用框架</h2></div>
+  <div class="en"><p>There are many frameworks that make agentic systems easier to implement, including: The Claude Agent SDK; Strands Agents SDK by AWS; Rivet, a drag and drop GUI LLM workflow builder; and Vellum, another GUI tool for building and testing complex workflows.</p>
+  <p>These frameworks make it easy to get started by simplifying standard low-level tasks like calling LLMs, defining and parsing tools, and chaining calls together. However, they often create extra layers of abstraction that can obscure the underlying prompts and responses, making them harder to debug. They can also make it tempting to add complexity when a simpler setup would suffice.</p>
+  <p>We suggest that developers start by using LLM APIs directly: many patterns can be implemented in a few lines of code. If you do use a framework, ensure you understand the underlying code. Incorrect assumptions about what's under the hood are a common source of customer error.</p></div>
+  <div class="zh"><p>有很多框架让智能体系统更容易实现，包括：Claude Agent SDK；AWS 的 Strands Agents SDK；Rivet（拖拽式 GUI LLM 工作流构建器）；Vellum（另一个构建与测试复杂工作流的 GUI 工具）。</p>
+  <p>这些框架通过简化调用 LLM、定义与解析工具、串联调用等标准底层任务来降低上手门槛。<b>但它们常常制造额外的抽象层，把底层的提示与响应遮住，让调试变难</b>；也会诱使你在简单方案就够用时徒增复杂度。</p>
+  <p><b>我们建议开发者直接从 LLM API 开始：很多模式几行代码就能实现。</b>如果要用框架，务必理解其底层代码。<b>对"引擎盖下发生什么"的错误假设，是客户出错的常见根源。</b></p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>这整段就是你课程路线的官方版："先裸写后框架"+ 8.8 的"爬层理由=遇到该层专门解决的问题"。Anthropic 亲手验证了你正在走的路。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s4">
+  <div class="sec-head"><span class="sec-chip">04</span><h2>积木、工作流与 Agent（五种模式）</h2></div>
+  <div class="en"><p>In this section, we'll explore the common patterns for agentic systems we've seen in production. We'll start with our foundational building block—the augmented LLM—and progressively increase complexity, from simple compositional workflows to autonomous agents.</p></div>
+  <div class="zh"><p>本节探索我们在生产中见到的智能体系统常见模式。从基础积木——<b>增强型 LLM</b>——开始，复杂度逐级上升：从简单的组合式工作流到自主 Agent。</p></div>
+
+  <h3 style="font-size:16.5px;margin-top:26px">积木：增强型 LLM（The augmented LLM）</h3>
+  <div class="en"><p>The basic building block of agentic systems is an LLM enhanced with augmentations such as retrieval, tools, and memory. Our current models can actively use these capabilities—generating their own search queries, selecting appropriate tools, and determining what information to retain.</p>
+  <p>We recommend focusing on two key aspects of the implementation: tailoring these capabilities to your specific use case and ensuring they provide an easy, well-documented interface for your LLM. …one approach is through our recently released Model Context Protocol, which allows developers to integrate with a growing ecosystem of third-party tools with a simple client implementation.</p>
+  <p>For the remainder of this post, we'll assume each LLM call has access to these augmented capabilities.</p></div>
+  <div class="zh"><p>智能体系统的基本积木是<b>通过检索、工具、记忆等增强能力加持过的 LLM</b>。如今的模型能主动使用这些能力——自己生成搜索词、自己选合适的工具、自己决定保留哪些信息。</p>
+  <p>实现上建议聚焦两点：<b>为你的具体用例量身定制这些能力</b>，以及<b>确保它们为 LLM 提供简单、文档完善的接口</b>。实现途径之一是我们最近发布的 Model Context Protocol（MCP），让开发者通过简单的客户端实现接入不断壮大的第三方工具生态。</p>
+  <p>下文中我们默认每次 LLM 调用都能使用这些增强能力。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>增强型 LLM = 你的零件清单本身：检索（第 7 章）+ 工具（5.4/8.3）+ 记忆（5.5/8.5）——8.1 记法里的前三件。MCP 提法即 8.7。</div>
+
+  <h3 style="font-size:16.5px;margin-top:26px">工作流①：提示链（Prompt chaining）</h3>
+  <div class="en"><p>Prompt chaining decomposes a task into a sequence of steps, where each LLM call processes the output of the previous one. You can add programmatic checks (see "gate" in the diagram below) on any intermediate steps to ensure that the process is still on track.</p>
+  <p><b>When to use:</b> ideal for situations where the task can be easily and cleanly decomposed into fixed subtasks. The main goal is to trade off latency for higher accuracy, by making each LLM call an easier task.</p>
+  <p><b>Examples:</b> Generating marketing copy, then translating it into a different language. Writing an outline of a document, checking that the outline meets certain criteria, then writing the document based on the outline.</p></div>
+  <div class="zh"><p>提示链把任务分解为顺序步骤，每次 LLM 调用处理上一步的输出。可以在任何中间步骤加程序化检查（图中的"gate/闸门"），确保过程仍在正轨。</p>
+  <p><b>何时用：</b>任务能轻松、干净地分解为<b>固定子任务</b>时最理想。核心目标是<b>用延迟换准确率</b>——让每次调用都变成更简单的任务。</p>
+  <p><b>例子：</b>生成营销文案，再翻译成另一语言。写文档大纲 → 检查大纲是否达标 → 再据大纲写全文。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>5.3 四档实验台就是提示链思想（恳求→schema→硬开关→校验自愈，每步带"闸门"）；"gate"即你的 Zod 校验。</div>
+
+  <h3 style="font-size:16.5px;margin-top:26px">工作流②：路由（Routing）</h3>
+  <div class="en"><p>Routing classifies an input and directs it to a specialized followup task. This workflow allows for separation of concerns, and building more specialized prompts. Without this workflow, optimizing for one kind of input can hurt performance on other inputs.</p>
+  <p><b>When to use:</b> works well for complex tasks where there are distinct categories that are better handled separately, and where classification can be handled accurately, either by an LLM or a more traditional classification model/algorithm.</p>
+  <p><b>Examples:</b> Directing different types of customer service queries (general questions, refund requests, technical support) into different downstream processes, prompts, and tools. Routing easy/common questions to smaller, cost-efficient models and hard/unusual questions to more capable models to optimize for best performance.</p></div>
+  <div class="zh"><p>路由对输入分类后，导流给专门的后续任务。这个工作流实现了<b>关注点分离</b>，可以为每类输入打造专门的 prompt——否则为一种输入做的优化会伤害其他输入的表现。</p>
+  <p><b>何时用：</b>复杂任务存在明显类别、各类分开处理更好、且分类本身能被准确完成（用 LLM 或传统分类模型/算法）时。</p>
+  <p><b>例子：</b>客服问题分诊（一般咨询/退款/技术支持）走不同下游流程、prompt 和工具；简单常见问题路由给小而便宜的模型，困难罕见问题路由给更强模型——即<b>模型路由</b>。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>6.5 的"模型路由"杠杆（一个 if 就是路由器）+ 6.6 的"规划步用推理模型、执行步用普通模型"，学术名就叫 Routing。</div>
+
+  <h3 style="font-size:16.5px;margin-top:26px">工作流③：并行化（Parallelization）</h3>
+  <div class="en"><p>LLMs can sometimes work simultaneously on a task and have their outputs aggregated programmatically. Two key variations: <b>Sectioning</b>: Breaking a task into independent subtasks run in parallel. <b>Voting</b>: Running the same task multiple times to get diverse outputs.</p>
+  <p><b>When to use:</b> effective when the divided subtasks can be parallelized for speed, or when multiple perspectives or attempts are needed for higher confidence results. For complex tasks with multiple considerations, LLMs generally perform better when each consideration is handled by a separate LLM call.</p>
+  <p><b>Examples — Sectioning:</b> Implementing guardrails where one model instance processes user queries while another screens them for inappropriate content; automating evals where each LLM call evaluates a different aspect. <b>Voting:</b> reviewing code for vulnerabilities with several different prompts; evaluating content appropriateness with multiple prompts requiring different vote thresholds.</p></div>
+  <div class="zh"><p>LLM 有时可以同时工作，再把输出程序化聚合。两个关键变体：<b>分段（Sectioning）</b>——把任务拆成相互独立的子任务并行跑；<b>投票（Voting）</b>——同一任务跑多次取多样结果。</p>
+  <p><b>何时用：</b>子任务可并行提速，或需要多视角/多次尝试来提高结果可信度时。对有多种考量的复杂任务，<b>每个考量单独一次 LLM 调用</b>通常表现更好——每次调用可以专注一件事。</p>
+  <p><b>例子——分段：</b>护栏实现（一个实例答用户、另一个实例筛查内容是否合规——比一次调用既答又查效果更好）；自动化评估（每次调用评一个维度）。<b>投票：</b>代码漏洞审查（多个不同 prompt 各自审查标记）；内容合规判定（多 prompt 不同投票阈值，平衡误报漏报）。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>8.2 的 Promise.all 并行工具调用是执行层并行；这里讲的是调用层并行。你 5.4 实验台"正题+对照"的多场景验证就是投票思想的手工版。</div>
+
+  <h3 style="font-size:16.5px;margin-top:26px">工作流④：编排者-工作者（Orchestrator-workers）</h3>
+  <div class="en"><p>In the orchestrator-workers workflow, a central LLM dynamically breaks down tasks, delegates them to worker LLMs, and synthesizes their results.</p>
+  <p><b>When to use:</b> well-suited for complex tasks where you can't predict the subtasks needed (in coding, the number of files that need to be changed and the nature of each change likely depend on the task). The key difference from parallelization is its flexibility—subtasks aren't pre-defined, but determined by the orchestrator based on the specific input.</p>
+  <p><b>Examples:</b> Coding products that make complex changes to multiple files each time. Search tasks that involve gathering and analyzing information from multiple sources.</p></div>
+  <div class="zh"><p>编排者-工作者工作流：中央 LLM <b>动态</b>拆解任务、派发给工作者 LLM、综合它们的结果。</p>
+  <p><b>何时用：</b>无法预知需要哪些子任务的复杂任务（如编程中要改几个文件、每个文件改什么取决于任务本身）。与并行化的拓扑相似，<b>关键区别是灵活性——子任务不是预先定义的，而是编排者根据具体输入现场决定</b>。</p>
+  <p><b>例子：</b>每次对多个文件做复杂修改的编程产品；需要从多来源收集分析信息的多源搜索任务。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>即 8.6 的第一种模式；"与并行化的区别=子任务现场定"这句是你 8.6 笔记该补的精确表述——Deep Research 型 Agent 的官方定义。</div>
+
+  <h3 style="font-size:16.5px;margin-top:26px">工作流⑤：评估者-优化者（Evaluator-optimizer）</h3>
+  <div class="en"><p>In the evaluator-optimizer workflow, one LLM call generates a response while another provides evaluation and feedback in a loop.</p>
+  <p><b>When to use:</b> particularly effective when we have clear evaluation criteria, and when iterative refinement provides measurable value. The two signs of good fit: first, that LLM responses can be demonstrably improved when a human articulates their feedback; and second, that the LLM can provide such feedback.</p>
+  <p><b>Examples:</b> Literary translation where there are nuances that the translator LLM might not capture initially, but where an evaluator LLM can provide useful critiques. Complex search tasks that require multiple rounds of searching and analysis, where the evaluator decides whether further searches are warranted.</p></div>
+  <div class="zh"><p>评估者-优化者工作流：一个 LLM 调用生成回答，另一个在循环中提供评估与反馈。</p>
+  <p><b>何时用：</b>有清晰的评估标准、且迭代精炼能带来可衡量价值时特别有效。两个适配信号：<b>一，人类的反馈确实能明显改进回答；二，LLM 能给出这种反馈</b>——类似人类作家打磨文章的迭代过程。</p>
+  <p><b>例子：</b>文学翻译（翻译模型起初抓不住的细微差别，评估模型能给出有用批评）；需要多轮检索分析的复杂搜索任务（评估者决定是否值得再搜一轮）。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>8.4 的 Reflection 范式的工程形态 + 8.13 LLM-as-judge 的生成端用法。注意适配信号的反面：没有清晰标准时硬上这套=烧钱空转。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s5">
+  <div class="sec-head"><span class="sec-chip">Agents 本体</span><h2>Agent：自主循环</h2></div>
+  <div class="en"><p>Agents are emerging in production as LLMs mature in key capabilities—understanding complex inputs, engaging in reasoning and planning, using tools reliably, and recovering from errors. Agents begin their work with either a command from, or interactive discussion with, the human user. Once the task is clear, agents plan and operate independently, potentially returning to the human for further information or judgement. During execution, it's crucial for the agents to gain "ground truth" from the environment at each step (such as tool call results or code execution) to assess its progress. Agents can then pause for human feedback at checkpoints or when encountering blockers. The task often terminates upon completion, but it's also common to include stopping conditions (such as a maximum number of iterations) to maintain control.</p>
+  <p>Agents can handle sophisticated tasks, but their implementation is often straightforward. They are typically just LLMs using tools based on environmental feedback in a loop. It is therefore crucial to design toolsets and their documentation clearly and thoughtfully.</p>
+  <p><b>When to use agents:</b> Agents can be used for open-ended problems where it's difficult or impossible to predict the required number of steps, and where you can't hardcode a fixed path. The LLM will potentially operate for many turns, and you must have some level of trust in its decision-making. Agents' autonomy makes them ideal for scaling tasks in trusted environments. The autonomous nature of agents means higher costs, and the potential for compounding errors. We recommend extensive testing in sandboxed environments, along with the appropriate guardrails.</p>
+  <p><b>Examples from our own implementations:</b> A coding Agent to resolve SWE-bench tasks, which involve edits to many files based on a task description; Our "computer use" reference implementation, where Claude uses a computer to accomplish tasks.</p></div>
+  <div class="zh"><p>随着 LLM 在关键能力上成熟——理解复杂输入、推理与规划、可靠使用工具、从错误中恢复——<b>Agent 正在生产中崭露头角</b>。Agent 的工作从人类用户的指令或交互式讨论开始；任务明确后，Agent 独立规划与执行，必要时回头向人要信息或判断。执行过程中，<b>关键在于每一步都从环境获得"地面真值"（ground truth）</b>——如工具调用结果、代码执行结果——来评估自己的进度。Agent 可以在检查点或遇到阻塞时暂停等人反馈。任务通常在完成时终止，但也常设停止条件（如最大迭代次数）以保持控制。</p>
+  <p>Agent 能处理复杂任务，但<b>实现往往很直接：通常就是"LLM 在循环中基于环境反馈使用工具"而已</b>。因此，把工具集及其文档设计得清晰、周到至关重要。</p>
+  <p><b>何时用 Agent：</b>开放式问题——难以或无法预测所需步数、无法硬编码固定路径时。LLM 可能运行很多轮，你必须对其决策有基本信任。Agent 的自主性使它适合在<b>可信环境</b>中规模化任务。自主性也意味着更高成本与<b>误差累积</b>的可能。我们建议在<b>沙箱环境</b>中充分测试，并配以适当的护栏。</p>
+  <p><b>自家实例：</b>解 SWE-bench 任务的编程 Agent（依据任务描述修改多个文件）；Claude 的"computer use"参考实现（用电脑完成操作任务）。</p></div>
+  <div class="keybox"><span class="tag">🔑 一句话拿走</span>"Agent 的实现往往很直接——循环中基于环境反馈用工具"——这就是你 8.2 那 100 行的官方描述。<b>ground truth（每步从环境拿真值）</b>是你笔记里该补的词：工具回喂不只是协议要求，是 Agent 评估自身进度的唯一依据。误差累积（compounding errors）+ 沙箱测试 + 最大迭代数——8.12/8.14 的三件套在此原文背书。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s6">
+  <div class="sec-head"><span class="sec-chip">06</span><h2>组合定制与总结</h2></div>
+  <div class="en"><p>These building blocks aren't prescriptive. They're common patterns that developers can shape and combine to fit different use cases. The key to success, as with any LLM features, is measuring performance and iterating on implementations. To repeat: you should consider adding complexity <b>only</b> when it demonstrably improves outcomes.</p>
+  <p><b>Summary:</b> Success in the LLM space isn't about building the most sophisticated system. It's about building the <b>right</b> system for your needs. Start with simple prompts, optimize them with comprehensive evaluation, and add multi-step agentic systems only when simpler solutions fall short.</p>
+  <p>When implementing agents, we try to follow three core principles:</p>
+  <ul>
+    <li>Maintain <b>simplicity</b> in your agent's design.</li>
+    <li>Prioritize <b>transparency</b> by explicitly showing the agent's planning steps.</li>
+    <li>Carefully craft your agent-computer interface (ACI) through thorough tool documentation and testing.</li>
+  </ul>
+  <p>Frameworks can help you get started quickly, but don't hesitate to reduce abstraction layers and build with basic components as you move to production. By following these principles, you can create agents that are not only powerful but also reliable, maintainable, and trusted by their users.</p></div>
+  <div class="zh"><p>这些积木不是硬性规定，而是开发者可以塑形组合以适配不同用例的常见模式。成功的关键（与所有 LLM 功能一样）是<b>度量表现、迭代实现</b>。再说一遍：<b>只有当复杂度能可证明地改善结果时，才考虑增加它。</b></p>
+  <p><b>总结：</b>LLM 领域的成功不在于构建最复杂的系统，而在于为你的需求构建<b>对的</b>系统。从简单 prompt 起步，用全面的评估来优化它们，只有当更简单的方案不够时才引入多步智能体系统。</p>
+  <p>实现 Agent 时，我们遵循三条核心原则：</p>
+  <ul>
+    <li>保持 Agent 设计的<b>简单性（simplicity）</b>。</li>
+    <li>优先考虑<b>透明性（transparency）</b>——显式展示 Agent 的规划步骤。</li>
+    <li>通过完善的工具文档与测试，精心打造<b>Agent-计算机接口（ACI）</b>。</li>
+  </ul>
+  <p>框架能帮你快速起步，但走向生产时不要犹豫降低抽象层、用基础组件构建。遵循这些原则，你能造出不仅强大、而且<b>可靠、可维护、被用户信任</b>的 Agent。</p></div>
+  <div class="keybox"><span class="tag">🔑 三原则对账</span>简单性=8.1"能用工作流不用 Agent"；透明性=8.15 进度可视化/计划预览（你的交互四件套就是 transparency 的产品化）；<b>ACI</b>=8.3 工具设计的学术名（Anthropic 说做 SWE-bench 时"花在优化工具上的时间比 prompt 还多"——8.3"工具质量是第一杠杆"的出处）。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="a1">
+  <div class="sec-head"><span class="sec-chip">附录1</span><h2>Agent 实战：两个最有价值的领域</h2></div>
+  <div class="en"><p>Both applications illustrate how agents add the most value for tasks that require both conversation and action, have clear success criteria, enable feedback loops, and integrate meaningful human oversight.</p>
+  <p><b>A. Customer support</b> combines familiar chatbot interfaces with enhanced capabilities through tool integration. This is a natural fit for more open-ended agents because: Support interactions naturally follow a conversation flow while requiring access to external information and actions; Tools can be integrated to pull customer data, order history, and knowledge base articles; Actions such as issuing refunds or updating tickets can be handled programmatically; and Success can be clearly measured through user-defined resolutions. Several companies have demonstrated the viability of this approach through usage-based pricing models that charge only for successful resolutions, showing confidence in their agents' effectiveness.</p>
+  <p><b>B. Coding agents</b> The software development space has shown remarkable potential for LLM features. Agents are particularly effective because: Code solutions are verifiable through automated tests; Agents can iterate on solutions using test results as feedback; The problem space is well-defined and structured; and Output quality can be measured objectively. In our own implementation, agents can now solve real GitHub issues in the SWE-bench Verified benchmark based on the pull request description alone. However, whereas automated testing helps verify functionality, human review remains crucial for ensuring solutions align with broader system requirements.</p></div>
+  <div class="zh"><p>两个领域共同说明：<b>Agent 最有价值的任务具备四个特征——既要对话又要行动、成功标准清晰、能形成反馈回路、能纳入有意义的人类监督。</b></p>
+  <p><b>A. 客户支持</b>：熟悉的聊天界面 + 工具集成的增强能力。天然适合较开放的 Agent：支持对话天然是会话流、又需要访问外部信息与动作；工具可拉取客户数据/订单历史/知识库文章；退款、更新工单等动作可程序化处理；成功可通过"用户定义的解决"清晰度量。一些公司用"只按成功解决计费"的定价模式证明了这条路 viability（可行性）——他们对自己 Agent 的有效性有足够信心。</p>
+  <p><b>B. 编程 Agent</b>：软件开发领域展现了 LLM 的显著潜力（从代码补全到自主解决问题）。Agent 在此特别有效：代码方案可通过自动化测试验证；Agent 能用测试结果当反馈迭代方案；问题空间定义良好且结构化；输出质量可客观度量。在 Anthropic 自家实现中，Agent 已能仅凭 PR 描述解决 SWE-bench Verified 基准中的真实 GitHub issue。不过——自动化测试验证功能，<b>人工审查仍然至关重要</b>：确保方案与更广泛的系统需求对齐。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>"四个特征"是你给毕业项目选功能时的验收清单：任务既要对话又要行动吗？成功标准能写清楚吗？有反馈回路吗（能自动验证）？需要人在环吗？——四问全是 yes 才值得上 Agent。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="a2">
+  <div class="sec-head"><span class="sec-chip">附录2</span><h2>工具的提示工程（Prompt engineering your tools）</h2></div>
+  <div class="en"><p>No matter which agentic system you're building, tools will likely be an important part of your agent. Tool definitions and specifications should be given just as much prompt engineering attention as your overall prompts.</p>
+  <p>There are often several ways to specify the same action. For instance, you can specify a file edit by writing a diff, or by rewriting the entire file. For structured output, you can return code inside markdown or inside JSON. In software engineering, differences like these are cosmetic and can be converted losslessly. However, <b>some formats are much more difficult for an LLM to write than others</b>. Writing a diff requires knowing how many lines are changing in the chunk header before the new code is written. Writing code inside JSON (compared to markdown) requires extra escaping of newlines and quotes.</p>
+  <p>Our suggestions for deciding on tool formats: <b>Give the model enough tokens to "think" before it writes itself into a corner. Keep the format close to what the model has seen naturally occurring in text on the internet. Make sure there's no formatting "overhead" such as having to keep an accurate count of thousands of lines of code, or string-escaping any code it writes.</b></p>
+  <p>One rule of thumb is to think about how much effort goes into human-computer interfaces (HCI), and plan to invest just as much effort in creating good <b>agent-computer interfaces (ACI)</b>. Here are some thoughts on how to do so:</p>
+  <ul>
+    <li>Put yourself in the model's shoes. Is it obvious how to use this tool, based on the description and parameters? A good tool definition often includes example usage, edge cases, input format requirements, and clear boundaries from other tools.</li>
+    <li>How can you change parameter names or descriptions to make things more obvious? Think of this as writing a great docstring for a junior developer on your team.</li>
+    <li>Test how the model uses your tools: Run many example inputs to see what mistakes the model makes, and iterate.</li>
+    <li><b>Poka-yoke</b> your tools. Change the arguments so that it is harder to make mistakes.</li>
+  </ul>
+  <p>While building our agent for SWE-bench, we actually spent more time optimizing our tools than the overall prompt. For example, we found that the model would make mistakes with tools using relative filepaths after the agent had moved out of the root directory. To fix this, we changed the tool to always require absolute filepaths—and we found that the model used this method flawlessly.</p></div>
+  <div class="zh"><p>无论构建哪种智能体系统，工具都可能是 Agent 的重要部分。<b>工具定义与规格应当获得与整体 prompt 同等的提示工程关注度。</b></p>
+  <p>同一个动作常有多种指定方式：文件编辑可以写 diff、也可以重写整个文件；结构化输出可以放 markdown 里、也可以放 JSON 里。在软件工程中这些差异是表面性的、可无损互转。<b>但对 LLM 来说，某些格式写起来远比其他的难</b>：写 diff 需要在新代码写出来之前就知道块头里改了多少行；JSON 里写代码（对比 markdown）需要额外转义换行和引号。</p>
+  <p>选定工具格式的三条建议：<b>①给模型足够的 token 让它"想"，别让它把自己写进死角；②格式尽量贴近模型在互联网文本中自然见过的样子；③确保没有格式开销——比如要求精确统计数千行代码的行数、或对自己写的代码做字符串转义。</b></p>
+  <p>一条经验法则：想想人机接口（HCI）投入了多少精力，<b>就准备投入同样的精力打造好的 Agent-计算机接口（ACI）</b>。具体做法：</p>
+  <ul>
+    <li><b>设身处地为模型着想</b>：只看描述和参数，这个工具怎么用是一目了然吗？好的工具定义通常包含：用法示例、边界情况、输入格式要求、与其他工具的清晰边界。</li>
+    <li><b>改参数名或描述让事情更显然</b>：想象成给团队里的初级开发者写一份出色的 docstring。</li>
+    <li><b>测试模型怎么用你的工具</b>：跑大量示例输入，看模型犯什么错，迭代。</li>
+    <li><b>给工具做 Poka-yoke（防呆设计）</b>：改参数设计，让犯错变难。</li>
+  </ul>
+  <p>构建 SWE-bench Agent 时，<b>我们花在优化工具上的时间实际上比优化整体 prompt 还多</b>。例如我们发现：Agent 离开根目录后，模型用相对路径的工具会出错。修法：把工具改成<b>永远要求绝对路径</b>——模型的用法从此无懈可击。</p></div>
+  <div class="linknote"><span class="tag">🔗 连线</span>这个附录是 8.3 的完整原文——你的"四要素表"可对照补三条：格式贴近自然文本（这就是为什么"参数设计三条"里枚举优先）、<b>Poka-yoke 防呆</b>（把"改参数让犯错变难"记进笔记——比"写清楚描述"更进一步：直接从接口设计上消除错误可能）、绝对路径案例（8.12 参数幻觉的实证修法）。"diff vs 重写文件"的格式敏感度分析，你写 write_file 工具时的直接指导。</div>
+</section>
+
+<footer class="doc">
+  <p>中英对照版 · 原文 © Anthropic（<a href="https://www.anthropic.com/engineering/building-effective-agents">anthropic.com/engineering/building-effective-agents</a>，2024-12-19 发布）· 中文翻译供学习使用 · 绿色"连线"框为本课程补充（非原文内容），将文章观点钉到 8.1/8.3/8.4/8.6/8.8/8.12/8.13 相应小节 · 配套主文档：<a href="./8.1-8.15-Agent-详解.html">8.1–8.15 Agent 详解</a></p>
+</footer>
+
+</div>
+</body>
+</html>

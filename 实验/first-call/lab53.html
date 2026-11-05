@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.3 实验台 · 结构化输出三层对照</title>
+<style>
+  :root {
+    --bg: #f6f6f8; --fg: #1c1c22; --muted: #6d6d7a; --card: #ffffff; --border: #e3e3ea;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --code-bg: #ececf2;
+    --ok: #16a34a; --ok-soft: rgba(22,163,74,.1); --bad: #dc2626; --bad-soft: rgba(220,38,38,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141419; --fg: #e7e7ee; --muted: #9c9cab; --card: #1d1d26; --border: #2d2d3a;
+      --accent: #8f94f8; --accent-soft: rgba(143, 148, 248, .12); --code-bg: #26262f;
+      --ok: #4ade80; --ok-soft: rgba(74,222,128,.12); --bad: #f87171; --bad-soft: rgba(248,113,113,.1);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-size: 15px; line-height: 1.7; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+
+  header.top { padding: 32px 0 8px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header.top h1 { font-size: 21px; margin: 0; }
+  header.top .meta { color: var(--muted); font-size: 13px; }
+  header.top .meta a { color: var(--muted); }
+  .usage {
+    margin-top: 12px; background: var(--accent-soft); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 14px; font-size: 13.5px;
+  }
+  .usage a { color: var(--accent); }
+
+  .layout { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+  @media (max-width: 880px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .panel h3 { margin: 0 0 10px; font-size: 15px; }
+
+  label.field { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  textarea#notes {
+    width: 100%; min-height: 120px; resize: vertical;
+    background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+    font-size: 13.5px; line-height: 1.6;
+  }
+  textarea#notes:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  .levels { margin-top: 14px; display: grid; gap: 8px; }
+  .lv {
+    display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border);
+    border-radius: 10px; padding: 9px 12px; cursor: pointer; font-size: 13.5px; background: var(--bg);
+  }
+  .lv input { margin-top: 4px; accent-color: var(--accent); }
+  .lv.checked { border-color: var(--accent); background: var(--accent-soft); }
+  .lv b { font-weight: 600; }
+  .lv .sub { color: var(--muted); font-size: 12.5px; display: block; }
+
+  button.go {
+    margin-top: 14px; width: 100%; padding: 10px; border: none; border-radius: 10px;
+    background: var(--accent); color: #fff; font-size: 14.5px; cursor: pointer; font-weight: 500;
+  }
+  button.go:hover { filter: brightness(1.08); }
+  button.go:disabled { opacity: .55; cursor: wait; }
+
+  .stat { margin-top: 10px; font-size: 12.5px; color: var(--muted); min-height: 18px; }
+  .stat b { color: var(--fg); font-weight: 500; }
+
+  /* ---------- 结果区 ---------- */
+  .verdict { font-size: 15px; font-weight: 600; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; }
+  .verdict.ok { background: var(--ok-soft); color: var(--ok); }
+  .verdict.bad { background: var(--bad-soft); color: var(--bad); }
+  .verdict .d { font-weight: 400; font-size: 13px; display: block; margin-top: 2px; }
+
+  .step {
+    border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden;
+  }
+  .step-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 14px; background: var(--bg); border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .step-head .n {
+    background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 12px;
+    padding: 1px 9px; border-radius: 999px;
+  }
+  .chip { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .chip.pass { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+  .chip.fail { color: var(--bad); border-color: var(--bad); background: var(--bad-soft); }
+  .step-body { padding: 10px 14px; }
+  .step-body h4 { margin: 8px 0 4px; font-size: 12.5px; color: var(--muted); font-weight: 500; }
+  .raw {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+  }
+  .errline { color: var(--bad); font-size: 12.5px; margin: 6px 0 0; white-space: pre-wrap; }
+
+  .final { border-color: var(--ok); }
+  .final .step-head { background: var(--ok-soft); }
+  .final h4 { color: var(--ok); }
+  pre.obj {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; font-size: 12.5px; line-height: 1.6; margin: 6px 0 0;
+    white-space: pre-wrap;       /* 长行自动折行，不撑出横向滚动条 */
+    word-break: break-all;       /* 长 id/URL 也能断 */
+    overflow-wrap: anywhere;
+    min-width: 0;                /* grid 内允许收缩 */
+    max-width: 100%;
+  }
+
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .hint code { background: var(--code-bg); padding: 0 5px; border-radius: 4px; }
+  .empty { color: var(--muted); font-size: 13.5px; text-align: center; padding: 40px 0; }
+  .badge-note {
+    display:inline-block; font-size:11px; color:var(--muted); border:1px dashed var(--border);
+    border-radius:999px; padding:0 8px; margin-left:6px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>5.3 实验台 · 结构化输出三层对照</h1>
+  <div class="meta"><a href="/">← 返回控制台</a> · 主文档 <a href="/docs/学习/05-Prompt与上下文工程/5.3-结构化输出-动手实验室.html" target="_blank">六关卡实验室</a> · 主详解 <a href="/docs/学习/05-Prompt与上下文工程/5.1-5.6-Prompt与上下文工程-详解.html" target="_blank">5.1–5.6</a> · <a href="/5.4">5.4 实验台 →</a> · 走真实 API（.env）· 全量日志落 logs/meeting-*.json</div>
+</header>
+
+<div class="usage">
+  <b>玩法</b>：左侧选<b>防线档位</b>，同一段乱笔记反复跑，观察输出质量差别——
+  <b>档 0</b> 裸恳求（最容易看到围栏/客套话/中文标点翻车）→
+  <b>档 1</b> +schema 说明 →
+  <b>档 2</b> +<code>response_format</code> 硬开关（语法 100%）→
+  <b>档 3</b> +Zod 校验+自愈重试（完整生产形态，对应 <code>meeting-notes.ts</code>）。
+  每一步的过程（原文 → parse → Zod → 自愈）全部展开显示。
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h3>输入</h3>
+    <label class="field" for="notes">会议笔记（随手乱写，越乱越好）</label>
+    <textarea id="notes">周会记录：小李说导出功能有bug，点击三次没反应，要周五前修掉。
+大家同意加个进度条。
+小王下周三做用户调研，时间还没定。
+老板说以后周会改到周一开。</textarea>
+
+    <div class="levels" id="levels">
+      <label class="lv" data-lv="0">
+        <input type="radio" name="lv" value="0">
+        <span><b>档 0 · 裸恳求</b><span class="sub">system 只说"转成 JSON"，无 schema 说明。5.3 三层里的 ①——赌那 90%。</span></span>
+      </label>
+      <label class="lv" data-lv="1">
+        <input type="radio" name="lv" value="1">
+        <span><b>档 1 · 恳求 + JSON Schema</b><span class="sub">system 附上结构图纸。格式漂移大幅减少，仍无硬保证。</span></span>
+      </label>
+      <label class="lv" data-lv="2">
+        <input type="radio" name="lv" value="2">
+        <span><b>档 2 · + response_format</b><span class="sub">加 <code>json_object</code> 硬开关：约束解码保证语法 100% 合法，字段语义仍不管。</span></span>
+      </label>
+      <label class="lv checked" data-lv="3">
+        <input type="radio" name="lv" value="3" checked>
+        <span><b>档 3 · + Zod 自愈循环（生产形态）<span class="badge-note">默认</span></b><span class="sub">失败带错误信息重试，最多 3 次。= <code>meeting-notes.ts</code> 的完整版。</span></span>
+      </label>
+    </div>
+
+    <button class="go" id="go">整理 →</button>
+    <div class="stat" id="stat"></div>
+    <div class="hint">
+      对比玩法：①同一段笔记分别在档 0 和档 3 各跑一次，看围栏/客套话差别；
+      ②在笔记里故意只写事情不写人名，看 <code>owner</code> 是被编出来（档 0/1）还是被追问（不会——Zod 只查形状，幻觉要靠下游）。
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>过程与结果</h3>
+    <div id="result"><div class="empty">选档位，点「整理 →」——全过程（模型原文 → parse → Zod → 自愈）会一步步展开在这里。</div></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+(function () {
+  var lvBox = document.getElementById("levels");
+  var goBtn = document.getElementById("go");
+  var statEl = document.getElementById("stat");
+  var resultEl = document.getElementById("result");
+
+  lvBox.addEventListener("change", function () {
+    lvBox.querySelectorAll(".lv").forEach(function (l) {
+      l.classList.toggle("checked", l.querySelector("input").checked);
+    });
+  });
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function hi(code) { return esc(code); }
+  function pretty(obj) { return hi(JSON.stringify(obj, null, 2)); }
+
+  function chip(ok, passText, failText) {
+    return '<span class="chip ' + (ok ? "pass" : "fail") + '">' + (ok ? passText : failText) + "</span>";
+  }
+
+  /* ---------- 每次尝试：完整请求 / 完整响应 / 处理流水线（控制台同款信息标准） ---------- */
+  function renderStep(step, idx) {
+    var chips = "";
+    if (step.fenceStripped) chips += chip(true, "①剥围栏", "");
+    chips += step.parse && step.parse.ok
+      ? chip(true, "②parse ✓", "")
+      : chip(false, "", "②parse ✗ " + esc((step.parse && step.parse.error || "").slice(0, 60)));
+    chips += step.zodError == null
+      ? chip(true, "③Zod ✓", "")
+      : chip(false, "", "③Zod ✗");
+
+    var head = '<div class="step-head"><span class="n">尝试 #' + (idx + 1) + "</span>" + chips +
+      (step.wire ? '<span class="chip">' + esc(step.wire.status || "") + " · " + (step.wire.durationMs ?? "?") + "ms</span>" : "") +
+      (step.finishReason ? '<span class="chip">finish_reason: ' + esc(step.finishReason) + "</span>" : "") + "</div>";
+
+    var body = '<div class="step-body">';
+
+    // —— A. 本次真实发出的完整请求（system 全文可见，Authorization 打码）——
+    if (step.wire) {
+      body += "<h4>A · 本次真实请求（system 全文 = messages[0].content；Key 已打码）</h4>" +
+        '<div class="raw">' + esc(step.wire.method + " " + step.wire.url) + "\n" +
+        esc(Object.entries(step.wire.headers || {}).map(function (kv) { return kv[0] + ": " + kv[1]; }).join("\n")) + "</div>" +
+        '<pre class="obj" style="margin-top:6px">' + pretty(step.wire.body) + "</pre>";
+    }
+
+    // —— B. 上游完整响应（一字不丢，控制台同款）——
+    if (step.fullResponse) {
+      body += "<h4>B · 上游完整响应（= 你 curl 拿到的那个 JSON，一字不丢）</h4>" +
+        '<pre class="obj">' + pretty(step.fullResponse) + "</pre>";
+    } else if (step.upstream) {
+      body += "<h4>B · 上游错误响应</h4>" + '<pre class="obj">' + pretty(step.upstream) + "</pre>";
+    }
+
+    // —— C. 模型吐的 content（从 B 抽出来放大）——
+    body += "<h4>C · 模型原文（= B 里 choices[0].message.content，大模型吐的字，" + (step.raw ? step.raw.length : 0) + " 字符）</h4>" +
+      '<div class="raw">' + hi(step.raw || "(空)") + "</div>";
+
+    // —— D. server 处理流水线（逐步，对着代码讲）——
+    body += "<h4>D · server 处理流水线（你的代码在这四步里当家）</h4>" +
+      '<div class="raw">' +
+      "1. 剥围栏 stripFence()：" + (step.fenceStripped ? "发现围栏残渣，已剥掉" : "无围栏，原样通过") + "\n" +
+      "2. JSON.parse()：" + (step.parse && step.parse.ok ? "✓ 语法合法，得到对象" : "✗ 语法失败 —— " + esc(step.parse && step.parse.error || "")) + "\n" +
+      "3. MeetingSchema.safeParse()：" + (step.zodError == null ? "✓ 形状合格 → 交付 meeting 对象" : "✗ 形状不合格 —— " + esc((step.zodError || "").slice(0, 220))) + "\n" +
+      (step.requestError ? "0. 请求层就失败：" + esc(step.requestError) + "\n" : "") +
+      "→ 三步的代码就是 server.ts 里 runMeeting() 的 124~147 行</div>";
+
+    if (step.zodError != null) {
+      body += '<p class="errline">🛡 ZodError 详情: ' + esc(step.zodError) + "</p>";
+    }
+    if (step.requestError) {
+      body += '<p class="errline">🌐 请求失败: ' + esc(step.requestError) + "</p>";
+    }
+    return head + body + "</div>";
+  }
+
+  function render(r) {
+    var html = "";
+    if (r.ok) {
+      html += '<div class="verdict ok">✓ 验收通过 · ' + r.attempts + " 次尝试 · " + r.durationMs + "ms" +
+        '<span class="d">拿到结构化 Meeting 对象——程序现在可以直接 <code>meeting.actionItems[0].owner</code> 取值。</span></div>';
+    } else {
+      html += '<div class="verdict bad">✗ 验收失败 · ' + r.attempts + " 次尝试 · " + r.durationMs + "ms" +
+        '<span class="d">所有防线都被穿透。真实生产里这时该告警/降级，而不是把烂数据静默吞下。</span></div>';
+    }
+
+    html += r.steps.length
+      ? '<div class="hint" style="margin-bottom:8px">下面按「尝试 #N」展开：<b>A 完整请求</b>（system 全文）→ <b>B 完整响应</b>（原始 JSON）→ <b>C 模型原文</b> → <b>D 处理流水线</b>。落盘日志 logs/meeting-*.json 内容与此一致。</div>'
+      : "";
+    r.steps.forEach(function (s, i) { html += renderStep(s, i); });
+
+    if (r.ok) {
+      html += '<div class="step final"><div class="step-head"><span class="n">最终交付</span>' +
+        chip(true, "Meeting 对象", "") + "</div>" +
+        '<div class="step-body"><h4>parsed.data（Zod 校验后的产物，类型 = z.infer&lt;typeof MeetingSchema&gt;）</h4>' +
+        '<pre class="obj">' + pretty(r.meeting) + "</pre></div></div>";
+    }
+    html += '<div class="hint">本次全过程已落盘：<code>logs/meeting-*.json</code>（最新一个）</div>';
+    resultEl.innerHTML = html;
+  }
+
+  goBtn.addEventListener("click", async function () {
+    var notes = document.getElementById("notes").value.trim();
+    if (!notes) { statEl.innerHTML = "<b>笔记不能为空</b>"; return; }
+    var lv = Number(lvBox.querySelector("input:checked").value);
+    goBtn.disabled = true;
+    goBtn.textContent = "请求中…（正在调大模型接口）";
+    statEl.innerHTML = "档 " + lv + " · 浏览器 → server.ts → 大模型 API …";
+    resultEl.innerHTML = '<div class="empty">正在真实调用大模型接口（.env 里的厂商）…<br>非流式，一般 3~15 秒；返回后展示完整请求/响应透视。</div>';
+    try {
+      var t0 = Date.now();
+      var res = await fetch("/api/meeting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: notes, level: lv }),
+      });
+      var r = await res.json();
+      if (!res.ok) throw new Error(r.error || "HTTP " + res.status);
+      statEl.innerHTML = "完成，耗时 " + (Date.now() - t0) + "ms";
+      render(r);
+    } catch (e) {
+      statEl.innerHTML = "<b>失败：</b>" + esc(e.message);
+      resultEl.innerHTML = '<div class="empty">出错：' + esc(e.message) + "。先确认服务在跑（npm run ui）。</div>";
+    } finally {
+      goBtn.disabled = false;
+      goBtn.textContent = "整理 →";
+    }
+  });
+})();
+</script>
+</body>
+</html>

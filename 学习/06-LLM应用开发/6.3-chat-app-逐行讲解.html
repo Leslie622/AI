@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6.3 动手讲解 · chat-app 逐行对照</title>
+<style>
+  :root {
+    --bg: #f6f6f8; --fg: #1c1c22; --muted: #6d6d7a; --card: #ffffff; --border: #e3e3ea;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --code-bg: #ececf2;
+    --ok: #16a34a; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141419; --fg: #e7e7ee; --muted: #9c9cab; --card: #1d1d26; --border: #2d2d3a;
+      --accent: #8f94f8; --accent-soft: rgba(143, 148, 248, .12); --code-bg: #26262f;
+      --ok: #4ade80; --warn: #fbbf24;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-size: 15.5px; line-height: 1.75; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px 80px; }
+  header.top { padding: 44px 0 8px; }
+  header.top h1 { font-size: 25px; margin: 0 0 6px; }
+  header.top .meta { color: var(--muted); font-size: 13px; }
+  .usage { margin-top: 16px; background: var(--accent-soft); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; font-size: 14px; }
+  nav.toc { position: sticky; top: 0; z-index: 10; margin: 20px -20px 0; padding: 10px 20px; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 4px; }
+  nav.toc a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+  nav.toc a:hover { color: var(--fg); background: var(--accent-soft); }
+  section.sec { margin-top: 48px; }
+  .sec-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .sec-chip { font-size: 12.5px; color: var(--accent); background: var(--accent-soft); padding: 2px 10px; border-radius: 999px; font-weight: 500; flex: none; }
+  .sec-head h2 { font-size: 21px; margin: 0; }
+  .goal { color: var(--muted); font-size: 13.5px; margin: 4px 0 18px; padding-left: 10px; border-left: 3px solid var(--accent); }
+  h3 { font-size: 17px; margin: 28px 0 8px; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 24px; }
+  li { margin: 4px 0; }
+  code { background: var(--code-bg); border-radius: 5px; padding: 1px 6px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+  pre code { background: none; padding: 0; }
+  strong { font-weight: 600; }
+  .map { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin: 14px 0; font-size: 14px; }
+  .map .tag { color: var(--accent); font-weight: 500; margin-right: 6px; }
+  .note { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin: 14px 0; font-size: 14px; }
+  .note .tag { color: var(--warn); font-weight: 500; margin-right: 6px; }
+  @media (prefers-color-scheme: dark) { .note .tag { color: var(--warn); } }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { white-space: nowrap; font-weight: 500; }
+  .tbl-wrap { overflow-x: auto; }
+  .arch { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; font-family: inherit; font-size: 13px; line-height: 1.7; white-space: pre; overflow-x: auto; }
+  details.qa { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 4px 18px; margin: 10px 0; }
+  details.qa summary { cursor: pointer; font-weight: 500; padding: 10px 0; }
+  details.qa .ans { color: var(--muted); font-size: 14px; border-top: 1px dashed var(--border); padding: 8px 0 14px; }
+  details.qa .ans b { color: var(--fg); font-weight: 500; }
+  .diagram { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px; margin: 14px 0; }
+  .diagram svg { width: 100%; height: auto; display: block; }
+  .diagram .d-cap { text-align: center; color: var(--muted); font-size: 13px; margin-top: 8px; }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>6.3 动手讲解 · chat-app 逐行对照</h1>
+  <div class="meta">工程：<b>实验/chat-app/</b>（已跑通）· 技术栈 Next.js 16 + AI SDK v7 + Zod 4 · 快照 2026-11-05</div>
+  <div class="usage">
+    <b>怎么用这份文档</b>：左边开 <code>实验/chat-app/</code> 的源码，右边读这页——每个文件先"这一层管什么"，再逐段讲"这段对应你手搓过的哪一块"。全部读完后你应该能回答：SDK 每个抽象替我干了什么、什么还是我在决策。<b>启动方式</b>：<code>cd 实验/chat-app && npm run dev</code> → 浏览器 <code>http://localhost:3000</code>（当前 dev server 已在跑）。
+  </div>
+</header>
+
+<nav class="toc" aria-label="目录">
+  <a href="#arch">0 全景</a>
+  <a href="#deps">1 依赖</a>
+  <a href="#route">2 route.ts</a>
+  <a href="#page">3 page.tsx</a>
+  <a href="#traps">4 版本坑</a>
+  <a href="#qa">自检</a>
+</nav>
+
+<!-- ================================================================ -->
+<section class="sec" id="arch">
+  <div class="sec-head"><span class="sec-chip">0</span><h2>全景：两个进程，一次请求的旅行</h2></div>
+  <div class="goal">先立地图：Next.js 应用 = 前端（浏览器里的 React）+ 服务端（Node 进程里的 API Routes）。你的 Key 住在服务端。</div>
+  <div class="diagram">
+    <svg viewBox="0 0 860 470" role="img" aria-label="chat-app 架构图：浏览器与 Node 进程之间的请求旅行">
+      <style>
+        .bx { fill: var(--card); stroke: var(--border); stroke-width: 1.5; rx: 10; }
+        .bx-acc { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+        .lbl { fill: var(--fg); font-size: 14px; font-weight: 600; }
+        .sub { fill: var(--muted); font-size: 12px; }
+        .code { fill: var(--fg); font-size: 12.5px; font-family: ui-monospace, monospace; }
+        .arrow { stroke: var(--accent); stroke-width: 2; fill: none; marker-end: url(#ah); }
+        .arrow-back { stroke: var(--ok); stroke-width: 2; fill: none; marker-end: url(#ah2); }
+        .arrow-grey { stroke: var(--muted); stroke-width: 1.6; fill: none; marker-end: url(#ah3); }
+        .albl { fill: var(--accent); font-size: 12px; font-weight: 500; }
+        .albl2 { fill: var(--ok); font-size: 12px; font-weight: 500; }
+        .albl3 { fill: var(--muted); font-size: 12px; }
+      </style>
+      <defs>
+        <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--accent)"/></marker>
+        <marker id="ah2" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--ok)"/></marker>
+        <marker id="ah3" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--muted)"/></marker>
+      </defs>
+
+      <!-- 泳池标题 -->
+      <text x="150" y="26" text-anchor="middle" class="lbl" font-size="15">浏览器</text>
+      <text x="640" y="26" text-anchor="middle" class="lbl" font-size="15">Node 进程（Next.js dev server）</text>
+      <line x1="420" y1="10" x2="420" y2="430" stroke="var(--border)" stroke-dasharray="5 5"/>
+
+      <!-- 左：page.tsx -->
+      <rect x="40" y="44" width="220" height="150" rx="10" class="bx"/>
+      <text x="150" y="70" text-anchor="middle" class="lbl">page.tsx</text>
+      <text x="150" y="92" text-anchor="middle" class="sub">React 聊天界面</text>
+      <text x="150" y="118" text-anchor="middle" class="code">useChat()</text>
+      <text x="150" y="140" text-anchor="middle" class="sub">messages / sendMessage</text>
+      <text x="150" y="160" text-anchor="middle" class="sub">stop / status / error</text>
+      <text x="150" y="182" text-anchor="middle" class="code">parts 逐个渲染 ▍</text>
+
+      <!-- 右：route.ts -->
+      <rect x="520" y="44" width="300" height="230" rx="10" class="bx-acc"/>
+      <text x="670" y="70" text-anchor="middle" class="lbl">app/api/chat/route.ts</text>
+      <text x="670" y="92" text-anchor="middle" class="sub">服务端！Key 只在这里</text>
+      <text x="545" y="120" class="code">convertToModelMessages()</text>
+      <text x="545" y="140" class="sub">UI 协议 → 模型协议（5.1 剧本）</text>
+      <text x="545" y="168" class="code">streamText({ tools, stopWhen })</text>
+      <text x="545" y="188" class="sub">内部 = 你 5.4 手搓的 for 循环</text>
+      <text x="545" y="214" class="code">read_file.execute()</text>
+      <text x="545" y="234" class="sub">path.basename 白名单（5.4 防线）</text>
+      <text x="545" y="260" class="code">toUIMessageStreamResponse()</text>
+
+      <!-- 左下：.env -->
+      <rect x="40" y="360" width="220" height="64" rx="10" class="bx"/>
+      <text x="150" y="386" text-anchor="middle" class="lbl">.env</text>
+      <text x="150" y="408" text-anchor="middle" class="sub">Key 永不进浏览器 · Next 原生加载</text>
+
+      <!-- 右下：DeepSeek + data -->
+      <rect x="540" y="300" width="260" height="52" rx="10" class="bx"/>
+      <text x="670" y="322" text-anchor="middle" class="lbl">DeepSeek API</text>
+      <text x="670" y="342" text-anchor="middle" class="sub">HTTPS，模型真身在这里</text>
+      <rect x="540" y="368" width="260" height="52" rx="10" class="bx"/>
+      <text x="670" y="390" text-anchor="middle" class="code">data/todo.md</text>
+      <text x="670" y="410" text-anchor="middle" class="sub">工具可读的文件，cwd = chat-app 根</text>
+
+      <!-- 箭头：请求 -->
+      <path d="M 260 110 C 380 110, 400 120, 518 120" class="arrow"/>
+      <text x="390" y="100" text-anchor="middle" class="albl">POST /api/chat · UIMessage[]</text>
+      <!-- 箭头：响应流 -->
+      <path d="M 518 168 C 400 168, 380 190, 262 190" class="arrow-back"/>
+      <text x="388" y="158" text-anchor="middle" class="albl2">◀ SSE：text-delta / 工具事件流</text>
+      <!-- 箭头：模型调用 -->
+      <path d="M 670 276 L 670 298" class="arrow-grey"/>
+      <text x="682" y="292" class="albl3">HTTPS（Key 陪伴出行）</text>
+      <!-- 箭头：工具读文件 -->
+      <path d="M 670 352 L 670 366" class="arrow-grey"/>
+      <text x="682" y="364" class="albl3">readFileSync</text>
+      <!-- 箭头：env -->
+      <path d="M 200 358 C 300 320, 420 120, 518 100" class="arrow-grey" stroke-dasharray="4 4"/>
+      <text x="330" y="252" class="albl3">启动时注入 process.env（虚线=只加载一次）</text>
+    </svg>
+    <div class="d-cap">一次请求的旅行：useChat POST → route.ts 转协议+循环 → DeepSeek / data 文件 → SSE 事件流回浏览器逐字渲染</div>
+  </div>
+  <p>对照 5.4 实验台：那边是 <code>浏览器 → server.ts → 模型</code> 的三层；这边是 <code>浏览器 → Next API Route → 模型</code>——<b>架构完全同构，只是 server.ts 换成了 route.ts</b>。</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="deps">
+  <div class="sec-head"><span class="sec-chip">1</span><h2>依赖与工程结构</h2></div>
+  <div class="goal">四个包各司其职；其余全是脚手架默认物。</div>
+  <div class="tbl-wrap"><table>
+    <tr><th>包</th><th>干什么</th><th>你手搓时的对应物</th></tr>
+    <tr><td><code>next</code> 16</td><td>全栈框架：前端 + API Routes + .env 加载 + dev server</td><td>你的 server.ts + http 模块</td></tr>
+    <tr><td><code>ai</code> 7</td><td>核心：streamText / tool / convertToModelMessages / UIMessage 协议</td><td>你的 fetch 拼装 + SSE 翻译器 + Agent for 循环</td></tr>
+    <tr><td><code>@ai-sdk/openai</code></td><td>OpenAI 兼容 provider（baseURL 可指任意兼容厂商）</td><td>你的 <code>LLM_BASE_URL</code> + Authorization 头</td></tr>
+    <tr><td><code>@ai-sdk/react</code></td><td>useChat：前端聊天状态机</td><td>（你还没写过的部分）</td></tr>
+    <tr><td><code>zod</code> 4</td><td>工具参数 schema</td><td>5.3/5.4 的 JSON Schema 手写版</td></tr>
+  </table></div>
+  <p><code>npm run dev</code> = 起开发服务器（热更新）；<code>app/</code> 目录 = 全部业务代码（文件即路由）。</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="route">
+  <div class="sec-head"><span class="sec-chip">2</span><h2>route.ts —— 服务端心脏，逐段讲</h2></div>
+  <div class="goal">POST /api/chat：收 UIMessage[] → 转协议 messages → streamText（内含工具循环）→ 回 SSE 流。</div>
+
+  <h3>① 模型配置（三行 = 你的 .env 三件套）</h3>
+  <pre><code>const deepseek = createOpenAI({
+  baseURL: process.env.LLM_BASE_URL ? ... + "/v1" : "https://api.deepseek.com/v1",
+  apiKey: process.env.LLM_API_KEY ?? "",
+});
+const MODEL_ID = process.env.LLM_MODEL ?? "deepseek-chat";</code></pre>
+  <div class="map"><span class="tag">对照</span>first-call 的 <code>BASE_URL / API_KEY / MODEL</code> 三常量，一字不差搬过来。<b>注意 DeepSeek 要 <code>/v1</code> 后缀</b>（它的 base 是裸域名的协商问题——你 first-call 里是代码拼 <code>${BASE_URL}/chat/completions</code> 所以没感知，AI SDK 是 <code>${baseURL}/chat/completions</code>，所以 baseURL 必须含 /v1）。<code>?? ""</code> 兜底：Key 没配时请求会发出去然后吃 401——错误码四大家族（6.1）的第一课。</div>
+
+  <h3>② 工具定义（5.4 的说明书 + 执行器合体）</h3>
+  <pre><code>const read_file = tool({
+  description: "读取 data/ 目录下的文本文件，返回内容。只允许 data/ 内的文件。",
+  inputSchema: z.object({ filename: z.string().describe("文件名，如 todo.md") }),
+  execute: async ({ filename }: { filename: string }) => {
+    const safe = path.basename(filename);       // ← 5.4 同款白名单防线
+    try { return readFileSync(path.join(process.cwd(), "data", safe), "utf8"); }
+    catch (e) { return `读取失败：${...}`; }      // ← 5.4 教训：失败也回喂
+  },
+});</code></pre>
+  <div class="map"><span class="tag">对照</span>5.4 的 tools[] 数组（description + JSON Schema parameters）+ execReadFile() 函数，<b>合成了一个对象</b>。Zod schema 替你生成给模型看的 JSON Schema——5.3"两份 schema 手写两遍"的问题在这里被消灭。<b>版本坑</b>：ai v7 把字段名从 <code>parameters</code> 改成了 <code>inputSchema</code>——网上教程大多还是旧名，照抄会类型报错（我就是这么踩的）。<code>process.cwd()</code> = Next dev server 的启动目录 = chat-app 根，所以 <code>data/todo.md</code> 放工程根下。</div>
+
+  <h3>③ POST 处理器：三步</h3>
+  <pre><code>export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
+
+  const result = streamText({
+    model: deepseek(MODEL_ID),
+    system: "你是桌面助手，回答用中文。需要读文件时调用 read_file 工具。",
+    messages: await convertToModelMessages(messages),
+    tools: { read_file },
+    stopWhen: stepCountIs(5),
+  });
+
+  return result.toUIMessageStreamResponse();
+}</code></pre>
+  <ul>
+    <li><b><code>UIMessage[]</code></b>：前端 useChat 维护的消息格式——每条消息是 <code>parts[]</code>（文本块/工具块混排），比协议 messages 多 UI 元数据。<b>这是 SDK 的前端协议，不是模型的协议</b>。</li>
+    <li><b><code>convertToModelMessages()</code></b>：UI 协议 → 模型协议（5.1 的 messages 剧本）的翻译层。v7 里它返回 Promise，要 await（我踩的第二个坑）。等价于你自己写一个 <code>messages.map(...)</code> 拆 parts。</li>
+    <li><b><code>streamText(...)</code></b>：立刻返回（不阻塞），内部开始流式生成。<b>如果模型发了 tool_calls，SDK 在内部替你跑 5.4 的整个 for 循环</b>：执行 execute() → role:"tool" 回喂 → 重新请求 → 直到模型 stop 或 <code>stopWhen</code> 触发。<code>stepCountIs(5)</code> = 你的 MAX_ROUNDS=5 保险丝。</li>
+    <li><b><code>toUIMessageStreamResponse()</code></b>：把内部事件流打包成 SSE Response（Content-Type: text/event-stream）——<b>你 server.ts 里那套 SSE→ndjson 翻译器的地位</b>，只是方向反过来：它发给前端的是"UI 事件流"（text-delta / tool-input-available / tool-output-available…），前端 useChat 能直接消化。</li>
+  </ul>
+  <div class="map"><span class="tag">对照收拢</span>route.ts 全文 50 行。你手搓的等价物：first-call 的 fetch 拼装（~20 行）+ server.ts 的 SSE 翻译（~60 行）+ 5.4 的 runAgent 循环（~70 行）≈ 150 行。<b>SDK 抽掉的正是这 150 行协议搬运</b>；留下给你的决策：system 写什么、给哪些工具、白名单防线、轮数上限——第 5 章教的就是这些。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="page">
+  <div class="sec-head"><span class="sec-chip">3</span><h2>page.tsx —— 前端聊天界面，逐段讲</h2></div>
+  <div class="goal">useChat 一行拿到全套状态机；你只负责把 parts 渲染成人话。</div>
+
+  <h3>① useChat：前端状态机（你还没手搓过的那一块）</h3>
+  <pre><code>const { messages, sendMessage, stop, status, error } = useChat();</code></pre>
+  <div class="map"><span class="tag">对照</span>如果手搓，你需要的全部家当：<code>messages</code>（=你每轮重建的剧本的前端半边）、<code>sendMessage</code>（=POST /api/chat + 流式接收 + 增量更新 state）、<code>stop</code>（=你 6.2 学的 AbortController.abort）、<code>status</code>（"submitted"/"streaming"/"ready"，驱动按钮切换）、<code>error</code>（=try/catch 的友好版）。<b>五件套 = 一个聊天 UI 的全部状态</b>，useChat 打包给了你。它默认 POST 到 <code>/api/chat</code>——和你的 route.ts 约定俗成。</li></div>
+
+  <h3>② 消息渲染：parts 是核心新概念</h3>
+  <pre><code>{messages.map(m =&gt; (
+  &lt;div key={m.id}&gt;
+    {m.parts.map((p, i) =&gt; {
+      if (p.type === "text") return &lt;div&gt;{p.text}▍&lt;/div&gt;;   // 流式光标
+      if (p.type.startsWith("tool-")) return &lt;div&gt;🔧 工具调用…&lt;/div&gt;;
+      return null;
+    })}
+  &lt;/div&gt;
+))}</code></pre>
+  <ul>
+    <li><b>消息 = parts 数组</b>：一条 assistant 消息可以"先调用工具、再说一段话"，在 UI 上就是 tool 部件和 text 部件混排——你 5.4 页面上"意图报文 + 最终回答分开展示"的体验，就是 parts 结构支撑的。</li>
+    <li><b>流式渲染</b>：SSE 每来一个 text-delta，useChat 内部更新最后一条消息的最后一个 text part——React 重渲染，你看到逐字出现。你在 page.tsx 里看不到任何"接 SSE"的代码——全在 useChat 的 transport 里（默认 fetch-based transport，就是 6.2 说的 fetch-event-source 的封装）。</li>
+    <li><b>工具部件</b>：<code>p.type</code> 形如 <code>tool-read_file</code>，<code>p.state</code> 走 <code>input-streaming → input-available → output-available</code>——正是 5.4 四步的前端视角。我们渲染成"🔧 工具调用 read_file ✓ 完成"一行。</li>
+  </ul>
+
+  <h3>③ 停止按钮：一行</h3>
+  <pre><code>{busy ? &lt;button onClick={() =&gt; stop()}&gt;停止&lt;/button&gt; : &lt;button type="submit"&gt;发送&lt;/button&gt;}</code></pre>
+  <div class="map"><span class="tag">对照</span><code>stop()</code> 内部就是 AbortController.abort()（6.2）——中断 fetch，服务端 SSE 断开，streamText 感知到 abort 停止生成。已生成的 token 已计费（usage 已产生），半截消息留在界面上。</div>
+
+  <h3>④ 样式</h3>
+  <p>全部内联 style（不引入 Tailwind/CSS Modules，学习期少一层）。想美化随便改——布局逻辑：flex 纵向三段（标题/消息列表 flex:1 滚动/输入框）。</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="traps">
+  <div class="sec-head"><span class="sec-chip">4</span><h2>本次真实踩到的三个版本坑（结论先行）</h2></div>
+  <div class="goal">AI SDK 迭代快，教程/文档的 API 名经常滞后。这三个坑都是本次搭建真实发生的。</div>
+  <div class="tbl-wrap"><table>
+    <tr><th>坑</th><th>症状</th><th>真相与修法</th></tr>
+    <tr><td>tool 字段改名</td><td>execute 类型报错 "not assignable to undefined"</td><td>v7 把 <code>parameters</code> 改名 <code>inputSchema</code>。读 node_modules 里的 .d.ts 是最快的真相（比搜教程快）</td></tr>
+    <tr><td>Next 不需要 dotenv</td><td><code>import "dotenv/config"</code> → Module not found 500</td><td>Next 原生加载工程根 .env。手搓时代（tsx server.ts）要 dotenv，Next 时代删掉 import</td></tr>
+    <tr><td>convertToModelMessages 是异步</td><td>Type 'Promise&lt;ModelMessage[]&gt;' missing…</td><td>v7 返回 Promise，要 <code>await</code>。同样读 .d.ts 签名确认</td></tr>
+  </table></div>
+  <div class="note"><span class="tag">📝 元教训</span><b>"读 node_modules/*.d.ts" &gt; "搜教程"</b>——教程会过时，你装的包的类型定义永远是当期真相。这是 TS 工程师独有的超能力：Python 用户没有这么方便的"包内说明书"。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="qa">
+  <div class="sec-head"><span class="sec-chip">自检</span><h2>读完能答上吗</h2></div>
+  <details class="qa"><summary>Q1 为什么 Key 必须放 route.ts 而不能放 page.tsx？</summary><div class="ans">page.tsx 在浏览器执行——代码和 env 都会被发给用户；route.ts 在 Node 进程执行，env 留在服务端。5.3 立的纪律在 Next 的文件路由里有了物理边界：app/api/ 下的文件在服务端，其余默认在客户端。</div></details>
+  <details class="qa"><summary>Q2 stopWhen: stepCountIs(5) 对应你手搓的什么？谁在循环内？</summary><div class="ans">= 5.4 的 MAX_ROUNDS=5 保险丝。循环体在 SDK 内部：tool_calls → execute() → 回喂 → 重新请求，直到模型 stop 或步数到 5。你的代码只提供每轮的"执行器"（execute）。</div></details>
+  <details class="qa"><summary>Q3 UIMessage 和 ModelMessage 的区别？谁负责转？</summary><div class="ans">UIMessage=SDK 前端协议（parts 混排、带 id/state）；ModelMessage=5.1 的模型协议（role/content/tool_calls）。convertToModelMessages() 负责转（服务端收请求时）。响应方向由 toUIMessageStreamResponse() 打包回 UI 事件流。</div></details>
+  <details class="qa"><summary>Q4 前端怎么知道工具执行了？p.state 有哪些态？</summary><div class="ans">SSE 事件流里带 tool-input-available / tool-output-available 事件，useChat 把它们变成消息里的 tool 部件；state 走 input-streaming → input-available → output-available——5.4 四步的前端视角。</div></details>
+  <details class="qa"><summary>Q5 route.ts 50 行替代了你手搓的约多少行？没替代的是什么？</summary><div class="ans">≈150 行（fetch 拼装 + SSE 翻译器 + Agent for 循环）。没替代的：system 文案、工具选择与白名单防线、轮数上限、模型选型——决策层全是你的。</div></details>
+</section>
+
+<footer class="doc">
+  <p>快照 2026-11-05 · 基于实验/chat-app 实际代码与 ai v7.0 / @ai-sdk/openai 4.x / zod 4.x · 已验证：流式（首字 816ms）+ 工具调用（read_file todo.md → 总结）· 启动 <code>cd 实验/chat-app && npm run dev</code> → localhost:3000</p>
+</footer>
+
+</div>
+</body>
+</html>

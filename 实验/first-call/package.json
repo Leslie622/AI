@@ -10,5 +10,8 @@
   "devDependencies": {
     "dotenv": "^16.4.5",
     "tsx": "^4.19.0"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
   }
 }

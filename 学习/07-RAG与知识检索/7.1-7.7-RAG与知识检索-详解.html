@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>07 · RAG 与知识检索 · 7.1–7.7 详解</title>
+<style>
+  :root {
+    --bg: #f6f6f8; --fg: #1c1c22; --muted: #6d6d7a; --card: #ffffff; --border: #e3e3ea;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --code-bg: #ececf2;
+    --ok: #16a34a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141419; --fg: #e7e7ee; --muted: #9c9cab; --card: #1d1d26; --border: #2d2d3a;
+      --accent: #8f94f8; --accent-soft: rgba(143, 148, 248, .12); --code-bg: #26262f;
+      --ok: #4ade80;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-size: 15.5px; line-height: 1.75; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 20px 80px; }
+
+  header.top { padding: 44px 0 8px; }
+  header.top h1 { font-size: 26px; margin: 0 0 6px; }
+  header.top .meta { color: var(--muted); font-size: 13px; }
+  header.top .meta b { color: var(--fg); font-weight: 500; }
+  .usage {
+    margin-top: 16px; background: var(--accent-soft); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px; font-size: 14px;
+  }
+  nav.toc {
+    position: sticky; top: 0; z-index: 10; margin: 20px -20px 0; padding: 10px 20px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  nav.toc a {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  nav.toc a:hover { color: var(--fg); background: var(--accent-soft); }
+  nav.toc a.active { color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+
+  section.sec { margin-top: 52px; }
+  .sec-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .sec-chip {
+    font-size: 12.5px; color: var(--accent); background: var(--accent-soft);
+    padding: 2px 10px; border-radius: 999px; font-weight: 500; flex: none;
+  }
+  .sec-head h2 { font-size: 21px; margin: 0; }
+  .goal {
+    color: var(--muted); font-size: 13.5px; margin: 4px 0 18px;
+    padding-left: 10px; border-left: 3px solid var(--accent);
+  }
+  h3 { font-size: 17px; margin: 30px 0 8px; }
+  h4 { font-size: 15.5px; margin: 22px 0 6px; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 24px; }
+  li { margin: 4px 0; }
+  code { background: var(--code-bg); border-radius: 5px; padding: 1px 6px; font-size: .88em; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+  }
+  pre code { background: none; padding: 0; }
+  strong { font-weight: 600; }
+  .hook {
+    background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 10px 14px; margin: 14px 0; font-size: 14px;
+  }
+  .hook .hook-tag { color: var(--accent); font-weight: 500; margin-right: 6px; }
+  .note {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; margin: 14px 0; font-size: 14px;
+  }
+  .note .note-tag { color: #d97706; font-weight: 500; margin-right: 6px; }
+  @media (prefers-color-scheme: dark) { .note .note-tag { color: #fbbf24; } }
+  .task {
+    background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--ok);
+    border-radius: 10px; padding: 12px 16px; margin: 14px 0; font-size: 14px;
+  }
+  .task .task-tag { color: var(--ok); font-weight: 500; margin-right: 6px; }
+  .task ol, .task ul { margin: 6px 0 0; }
+
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  tr:last-child td { border-bottom: none; }
+  .tbl-wrap { overflow-x: auto; }
+  td:first-child { white-space: nowrap; font-weight: 500; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin: 14px 0; }
+  .pcard { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; font-size: 14px; }
+  .pcard h4 { margin: 0 0 6px; font-size: 15px; }
+  .pcard ul { padding-left: 18px; margin: 4px 0; }
+
+  .diagram { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px; margin: 14px 0; }
+  .diagram svg { width: 100%; height: auto; display: block; }
+  .diagram .d-cap { text-align: center; color: var(--muted); font-size: 13px; margin-top: 8px; }
+
+  details.qa {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 4px 18px; margin: 10px 0;
+  }
+  details.qa summary { cursor: pointer; font-weight: 500; padding: 10px 0; }
+  details.qa .ans { color: var(--muted); font-size: 14px; border-top: 1px dashed var(--border); padding: 8px 0 14px; }
+  details.qa .ans b { color: var(--fg); font-weight: 500; }
+
+  footer.doc {
+    margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 12.5px;
+  }
+  footer.doc a { color: var(--muted); }
+  @media print { nav.toc { display: none; } body { background: #fff; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>07 · RAG 与知识检索 —— 7 节详解</h1>
+  <div class="meta">对应大纲 <b>7.1 – 7.7</b> · 深度 <b>【精】</b> · 快照日期 <b>2026-11-05</b></div>
+  <div class="usage">
+    <b>RAG = 给模型外挂一个"可检索的记忆"。</b>好消息：你已经有 3/4 的零件——4.2 的 embedding（语义向量）、5.3 的 schema 纪律、6.3 的 chat-app（马上变成知识库的前端）。新零件只有两个：<b>chunking 的切法</b>和<b>向量检索的工程</b>。本章大作业（个人知识库问答"我的笔记里关于 MCP 都记了什么"）= 毕业项目 M5 零件。前置欠账提醒：4.2 的 embedding 动手如果还没做，本章 7.3 会把它补上（需要硅基流动或智谱的 embedding 模型，DeepSeek 没有 embedding API）。
+  </div>
+</header>
+
+<nav class="toc" aria-label="目录">
+  <a href="#s71">7.1 为什么 RAG</a>
+  <a href="#s72">7.2 解析与 chunking</a>
+  <a href="#s73">7.3 Embedding 与向量库</a>
+  <a href="#s74">7.4 检索策略</a>
+  <a href="#s75">7.5 进阶形态</a>
+  <a href="#s76">7.6 评估</a>
+  <a href="#s77">7.7 引用溯源</a>
+  <a href="#s-out">产出</a>
+  <a href="#s99">自检</a>
+</nav>
+
+<!-- ================================================================ -->
+<section class="sec" id="s71">
+  <div class="sec-head"><span class="sec-chip">7.1</span><h2>为什么需要 RAG</h2></div>
+  <div class="goal">验收：RAG 同时解决的三个问题各是什么？和微调的边界？和"直接塞全文"的边界？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>先造一个失败现场：问 chat-app"我的笔记里关于 MCP 都记了什么"——模型必然开始幻觉编造，因为它根本没读过你的仓库。<b>模型的知识 = 训练数据冻结的快照（4.4 知识截止），你的笔记不在里面，永远不在。</b>RAG 就是不重新训练、让模型"开卷考试"的工程方案。</div>
+
+  <h3>三个问题，一个方案</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>问题</th><th>机制根源</th><th>RAG 怎么解</th></tr>
+    <tr><td>知识截止</td><td>训练数据冻结在某时刻（4.4/4.8），新事实不在参数里</td><td>检索时把<b>最新的</b>资料喂进上下文</td></tr>
+    <tr><td>私有知识</td><td>你的笔记/文档/代码从来不在任何公开语料里</td><td>检索<b>你的</b>资料喂进上下文</td></tr>
+    <tr><td>幻觉</td><td>概率续写器，缺依据时照样生成（4.8）</td><td>答案被要求<b>只基于检索到的内容</b>——有据可查，且有出处（7.7）</td></tr>
+  </table></div>
+
+  <h3>RAG 一句话定义与全流程图</h3>
+  <p><strong>RAG（Retrieval-Augmented Generation）= 先检索、后生成</strong>：把和问题相关的资料片段找出来，塞进 prompt，让模型"照着资料答"——本质是 5.5 上下文工程的一个垂直应用（"检索内容"那一行的完整工程化）。</p>
+  <div class="diagram">
+    <svg viewBox="0 0 860 300" role="img" aria-label="RAG 两阶段流程：离线索引与在线检索生成">
+      <defs>
+        <marker id="ra" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--accent)"/></marker>
+        <marker id="rg" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--muted)"/></marker>
+      </defs>
+      <style>
+        .rbx { fill: var(--card); stroke: var(--border); stroke-width: 1.5; }
+        .rbx2 { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+        .rlbl { fill: var(--fg); font-size: 14px; font-weight: 600; }
+        .rsub { fill: var(--muted); font-size: 12px; }
+        .rcode { fill: var(--fg); font-size: 12.5px; font-family: ui-monospace, monospace; }
+        .ra1 { stroke: var(--accent); stroke-width: 2; fill: none; marker-end: url(#ra); }
+        .rg1 { stroke: var(--muted); stroke-width: 1.6; fill: none; marker-end: url(#rg); }
+        .phase { fill: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 2px; }
+      </style>
+      <!-- 阶段标签 -->
+      <text x="60" y="26" class="phase">离线 · 索引（做一次）</text>
+      <text x="60" y="176" class="phase">在线 · 检索+生成（每次提问）</text>
+      <line x1="30" y1="150" x2="830" y2="150" stroke="var(--border)" stroke-dasharray="5 5"/>
+      <!-- 离线 -->
+      <rect x="40" y="44" width="170" height="72" rx="10" class="rbx"/>
+      <text x="125" y="72" text-anchor="middle" class="rlbl">文档解析</text>
+      <text x="125" y="94" text-anchor="middle" class="rsub">md/pdf/网页 → 纯文本</text>
+      <rect x="255" y="44" width="170" height="72" rx="10" class="rbx"/>
+      <text x="340" y="72" text-anchor="middle" class="rlbl">Chunking 切块</text>
+      <text x="340" y="94" text-anchor="middle" class="rsub">7.2 · 切法决定质量</text>
+      <rect x="470" y="44" width="170" height="72" rx="10" class="rbx2"/>
+      <text x="555" y="72" text-anchor="middle" class="rlbl">Embedding</text>
+      <text x="555" y="94" text-anchor="middle" class="rsub">每块 → 向量（4.2）</text>
+      <rect x="685" y="44" width="145" height="72" rx="10" class="rbx"/>
+      <text x="757" y="72" text-anchor="middle" class="rlbl">向量库</text>
+      <text x="757" y="94" text-anchor="middle" class="rsub">向量+原文，存起来</text>
+      <line x1="210" y1="80" x2="253" y2="80" class="ra1"/>
+      <line x1="425" y1="80" x2="468" y2="80" class="ra1"/>
+      <line x1="640" y1="80" x2="683" y2="80" class="ra1"/>
+      <!-- 在线 -->
+      <rect x="40" y="196" width="170" height="72" rx="10" class="rbx"/>
+      <text x="125" y="224" text-anchor="middle" class="rlbl">用户提问</text>
+      <text x="125" y="246" text-anchor="middle" class="rsub">"我的笔记里 MCP…"</text>
+      <rect x="255" y="196" width="170" height="72" rx="10" class="rbx2"/>
+      <text x="340" y="224" text-anchor="middle" class="rlbl">查询向量化</text>
+      <text x="340" y="246" text-anchor="middle" class="rsub">同一个 embedding 模型</text>
+      <rect x="470" y="196" width="170" height="72" rx="10" class="rbx"/>
+      <text x="555" y="224" text-anchor="middle" class="rlbl">检索 Top-K</text>
+      <text x="555" y="246" text-anchor="middle" class="rsub">余弦最近邻（7.4）</text>
+      <rect x="685" y="196" width="145" height="72" rx="10" class="rbx2"/>
+      <text x="757" y="224" text-anchor="middle" class="rlbl">塞 prompt 生成</text>
+      <text x="757" y="246" text-anchor="middle" class="rsub">照资料答 + 出处（7.7）</text>
+      <line x1="210" y1="232" x2="253" y2="232" class="ra1"/>
+      <line x1="425" y1="232" x2="468" y2="232" class="ra1"/>
+      <line x1="640" y1="232" x2="683" y2="232" class="ra1"/>
+      <!-- 向量库向下连线 -->
+      <line x1="757" y1="118" x2="555" y2="194" class="rg1"/>
+    </svg>
+    <div class="d-cap">两阶段：离线把知识切块向量化存库（一次）；在线把问题向量化、捞最近邻、塞进 prompt 开卷考（每次）</div>
+  </div>
+
+  <h3>边界一：RAG vs 微调（什么时候用哪个）</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th></th><th>RAG</th><th>微调（第 9 章）</th></tr>
+    <tr><td>本质</td><td>给模型<b>看资料</b>（上下文注入）</td><td>改模型<b>的脑</b>（改权重）</td></tr>
+    <tr><td>适合</td><td>事实性知识、频繁更新、要出处</td><td>风格/格式/行为模式，相对稳定</td></tr>
+    <tr><td>更新成本</td><td>加文档即生效（重新索引几分钟）</td><td>重训练一次（钱+天）</td></tr>
+    <tr><td>幻觉抑制</td><td>强（有据可引）</td><td>弱（还是会编）</td></tr>
+    <tr><td>口诀</td><td><b>"知识"用 RAG</b></td><td><b>"行为"用微调</b></td></tr>
+  </table></div>
+
+  <div class="note"><span class="note-tag">📝 指路牌</span>这张表只是<b>立边界</b>——微调本体（LoRA 是什么、什么场景真值得微调、和 RAG 组合使用）在大纲 <b>第 9.1 节</b>正式讲（【浅】章，概念到直觉为止）。读到这里只需记住分工口诀：知识更新频繁、要出处 → RAG；风格/格式/行为模式稳定不变 → 才考虑微调。你的毕业项目（知识库+Agent）大概率全程用不到微调——别提前焦虑。</div>
+
+  <h3>边界二：RAG vs 直接塞全文（长上下文不能白嫖吗）</h3>
+  <p>窗口 128K+ 的时代，小文档库直接全文塞进 prompt 当然行（你的笔记仓库全文可能不到 100K token）。但 RAG 仍然赢在：<b>① 成本</b>——每轮全量重发 vs 只发 Top-5 片段（缓存也救不了每次都不同的尾部）；<b>② 精度</b>——lost in the middle（5.5）：塞 50 页找一页，中间的会被漏读；<b>③ 规模</b>——100 万字的时候物理上就塞不下了。<b>经验线：几百字~几千字直接塞；几万字以上 RAG。</b></p>
+
+  <div class="task"><span class="task-tag">🔧 动手 7.1（10 分钟）</span>失败现场确认：在 chat-app 里问"我的 5.3 实验台的四个档位分别是什么？"——观察模型是（a）坦承不知道（运气好），还是（b）一本正经地编造细节。截图/记录这个回答，7.6 做完知识库后用同一问题再问一次——两相对照就是你的第一个 RAG 评估数据点。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s72">
+  <div class="sec-head"><span class="sec-chip">7.2</span><h2>文档解析与 Chunking</h2></div>
+  <div class="goal">验收：为什么"切法直接决定质量"？三种切法各自的问题？切块该多大、为什么留重叠？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>RAG 系统的质量上限，<b>在 embedding 模型还没跑之前就被 chunking 决定了一大半</b>。切烂了（一句话被拦腰斩断、一个问题散在两块里），后面再先进的检索也救不回来——垃圾进垃圾出，这是 RAG 的第一定律。</div>
+
+  <h3>解析：先把"垃圾"挡在门外</h3>
+  <p>md/html/pdf 各有坑：md 相对干净（你的仓库主力）；html 要剥脚本/导航/广告；pdf 最险（双栏排版、扫描件、表格错位）。<b>策略：从自己吃得了的开始</b>——本章大作业只做 <code>学习/</code> 和 <code>资源/</code> 的 md，解析这一步几乎零成本；pdf 支持留到需要时再上（mammoth/docx4js/pdf-parse 类库）。</p>
+
+  <h3>Chunking：三种切法</h3>
+  <div class="cards">
+    <div class="pcard">
+      <h4>① 固定长度切（最简单）</h4>
+      <ul>
+        <li>每 500 字符切一刀</li>
+        <li>问题：<b>语义拦腰斩</b>——"MCP 是协议"和"用来连工具"分家</li>
+        <li>只适合：无明显结构、快速原型</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <h4>② 按结构切（md 的天选切法）✓</h4>
+      <ul>
+        <li>按标题层级切：## 一节 = 一块</li>
+        <li>天然语义完整——作者已经替你切好了</li>
+        <li>超长小节再降级内切（二级结构+固定长度兜底）</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <h4>③ 语义切（embedding 感知）</h4>
+      <ul>
+        <li>相邻句向量相似度骤降处 = 话题转折 = 切点</li>
+        <li>效果最好、成本最高（要先跑一遍 embedding）</li>
+        <li>本章不需要——你的笔记结构极好</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>三个关键参数（手搓知识库你会逐个摸到）</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>参数</th><th>经验值（中文 md）</th><th>为什么</th></tr>
+    <tr><td>块大小</td><td>300~800 字符</td><td>太小→语义碎（一块说不清一件事）；太大→检索精度稀释（一块混多件事，向量"平均化"，问 A 找到的是 AB 混块）</td></tr>
+    <tr><td>重叠 overlap</td><td>10~20%（如 500 字块叠 80 字）</td><td>防"答案恰在切缝上"——两块都含缝边内容，总有一块完整</td></tr>
+    <tr><td>元数据</td><td>每块带：文件路径、标题、行号</td><td>不只是检索用——<b>7.7 引用溯源全靠它</b>（"出处：学习/08-…/README.md 第 12 行"）</td></tr>
+  </table></div>
+
+  <div class="note"><span class="note-tag">📝 给你自己仓库的特调</span>你的 md 有天然优势：标题结构规整、每节主题单一、还有"本章笔记"这类自描述段落。<b>按结构切（## 级）+ 超长节内切</b>就是最优解，连 overlap 都可以小。另外每个块建议在向量化前拼上"文件路径+标题"前缀（如"【学习/05-…/README.md · 本章笔记】正文…"）——让这块的向量携带"我来自哪"的语义，检索和溯源双双受益。这招就是 Anthropic《Contextual Retrieval》的核心思想（README 进阶选读）的丐版。</div>
+
+  <div class="task"><span class="task-tag">🔧 动手 7.2（纸面推演，15 分钟）</span>拿 <code>学习/05-Prompt与上下文工程/README.md</code> 手动演练：①如果你按固定 300 字切，哪些概念会被拦腰斩断（找出 2 个具体例子）？②按 ## 结构切会得到几块、每块多大？③"5.4 Function Calling"那节如果超 800 字，你打算怎么二级切？把答案写进笔记——这三个问题的答案就是将来 <code>chunking.ts</code> 的伪代码。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s73">
+  <div class="sec-head"><span class="sec-chip">7.3</span><h2>Embedding 模型与向量库</h2></div>
+  <div class="goal">验收：向量库解决什么（对比数组暴力搜）？为什么查询和文档必须用同一个模型？桌面场景为什么选 LanceDB？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>4.2 你亲手算过余弦相似度——但那是 5 个句子两两算。如果库里有一万块，每个查询算一万次余弦呢？<b>向量库 = 当数据多到暴力搜开始变慢/变贵时的专业替代</b>。本节的工程路线就是大纲写的：<b>内存数组起步理解原理 → LanceDB 上生产</b>。</div>
+
+  <h3>Embedding 模型：检索的标尺必须统一</h3>
+  <ul>
+    <li>选型只看三样：<b>语言</b>（中文主力选 BAAI/bge-m3、Qwen embedding 系；多语言 bge-m3 最稳）、<b>维度</b>（1024/1536，存储存储成本）、<b>排行榜</b>（MTEB/C-MTEB 当期排名参考即可，你的数据实测才算数）</li>
+    <li><b>铁律：索引和查询必须用同一个模型</b>。不同模型的向量不在同一个"语义空间"——4.2 讲过每个模型有自己的一套坐标系，跨模型算余弦 = 用北京的地图坐标在上海导航，结果纯随机。换模型 = 全库重新索引。</li>
+    <li><b>厂商现实</b>：DeepSeek 没有 embedding API（4.2 就发现过）——需要另配：硅基流动（BAAI/bge-m3，便宜）、智谱（embedding-3）、OpenAI（text-embedding-3-small）。都是一个 HTTP 调用：文本进、向量出。</li>
+    <li>文件名不是内容名：图片（multimodal embedding）、代码（按符号切）有专门模型——本章 md 场景用文本模型即可。</li>
+  </ul>
+
+  <h3>向量库：从数组到 LanceDB</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>阶段</th><th>做法</th><th>瓶颈</th><th>定位</th></tr>
+    <tr><td>内存数组</td><td>所有块向量载入数组，查询时<b>逐个算余弦</b>排序</td><td>O(N)：1 万块×1024 维≈每个查询 1000 万次乘加——慢但还能忍；10 万块就不行了</td><td><b>学习期必做</b>——原理一目了然（本质上就是 4.2 那几行代码的规模化）</td></tr>
+    <tr><td>LanceDB</td><td>嵌入式向量库：一个本地目录就是库，零部署零服务进程，<b>TS 原生</b></td><td>近似最近邻（ANN）索引，查询近 O(1)</td><td><b>桌面应用的标配选择</b>（大纲钦点）：数据在本地文件里、不联网、和你 Electron 毕业项目气质完全吻合</td></tr>
+    <tr><td>云端托管</td><td>Pinecone / 阿里云向量检索等</td><td>要联网、要钱、数据出境问题</td><td>多人/大规模服务才需要——你的场景用不上</td></tr>
+  </table></div>
+
+  <h3>LanceDB 五分钟体感（真实代码）</h3>
+  <pre><code>import * as lancedb from "@lancedb/lancedb";
+import("@lancedb/lancedb").connect("学习知识库.lance")  // 目录即数据库
+  .then(async (db) => {
+    const tbl = await db.createTable("chunks", [{  // 首次建表：向量+原文+元数据一行一条
+      vector: [/* 1024 维数组 */],
+      text: "块原文……",
+      source: "学习/05-Prompt与上下文工程/README.md",
+      heading: "5.4 Function Calling",
+      line: 12,
+    }]);
+    // 检索：向量进 → 最近邻出（SQL 风格）
+    const hits = await tbl.search(queryVector).limit(5).execute();
+  });</code></pre>
+  <div class="note"><span class="note-tag">📝 桌面视角</span>为什么大纲钦点 LanceDB 而不是 Chroma/Milvus：①嵌入式——不需要用户装 Docker/起服务，<code>npm i</code> 就完事，毕业项目的用户是"拿到 app 的普通人"；②本地——私有笔记不出机器；③TS 一手——你的语言。第 11 章毕业项目直接复用本章的索引代码。</div>
+
+  <div class="task"><span class="task-tag">🔧 动手 7.3（补 4.2 的欠账，30 分钟）</span>embedding 相似度脚本进 <code>实验/first-call/</code>：
+    <ol>
+      <li>需要一个支持 embedding 的 Key（硅基流动/智谱，免费额度就够；DeepSeek 不行）——拿到后说一声我来接</li>
+      <li>脚本内容：三对句子算余弦（"前端开发"vs"写 CSS" vs "红烧肉做法"），打印相似度矩阵</li>
+      <li>验收问题：为什么"前端开发↔写 CSS"相似度远高于"前端开发↔红烧肉"？——答案：语义空间里距离近=含义近（4.2 的余弦直觉，这次规模化前最后一次手算）</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s74">
+  <div class="sec-head"><span class="sec-chip">7.4</span><h2>检索策略：相似度 / 混合 / 重排</h2></div>
+  <div class="goal">验收：纯向量检索的三类失败？混合检索为什么是标配？rerank 解决什么、代价是什么？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>向量检索不是银弹——它有三种标志性翻车，每一种你将来都会撞上。检索策略 = 知道翻车姿势 + 花小钱补救。</div>
+
+  <h3>纯向量检索的三类翻车</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>翻车</th><th>场景</th><th>根因</th></tr>
+    <tr><td>专有名词失明</td><td>搜"stepCountIs"——相关笔记排不进 Top-5</td><td>embedding 对<b>生僻符号/API 名</b>的语义把握弱，不如关键词匹配直接命中</td></tr>
+    <tr><td>语义漂移</td><td>问"MCP 怎么配"，捞回来一堆"配置文件格式"泛泛之谈</td><td>相似≠相关：向量距离近只说明"话题相邻"，不保证"能回答"</td></tr>
+    <tr><td>大库稀释</td><td>库到几十万块，Top-5 越来越"差不多"</td><td>ANN 近似的精度损失 + 高频话题块霸榜</td></tr>
+  </table></div>
+
+  <h3>三层策略，逐层加钱加精度</h3>
+  <div class="cards">
+    <div class="pcard">
+      <h4>① 纯向量（基线）</h4>
+      <ul>
+        <li>查询向量 → 余弦 Top-K</li>
+        <li>零额外成本，先跑通它</li>
+        <li>你的小库（几千块）纯向量往往已经够用</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <h4>② 混合检索（标配）</h4>
+      <ul>
+        <li>向量 Top-K + BM25 关键词 Top-K，结果融合（RRF）</li>
+        <li>专有名词由关键词救，语义问题由向量救——互补</li>
+        <li>LanceDB 支持全文索引，混合查询一行</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <h4>③ 重排 rerank（精修）</h4>
+      <ul>
+        <li>召回 50 块 → rerank 模型逐对"问题-块"打精分 → 取 Top-5</li>
+        <li>解决"相似但不回答"的漂移——rerank 是<b>问答相关性</b>专用模型</li>
+        <li>代价：多一次 API 调用+延迟；查询改写/多路召回/GraphRAG 见 7.5</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>RAG 发烧友的"三层楼"，你的知识库该住几楼</h3>
+  <p><b>一楼（纯向量）先住下</b>，用 7.6 的评测集体检：通过率 ≥80% 就不搬家；&lt;80% 再看失败案例属于哪类翻车——专有名词翻车上混合检索，语义漂移上 rerank。<b>评估驱动升级，不要一上来就盖三层楼</b>——那是 RAG 教程最常教的过度工程。你自己的库大概率一楼+二楼就到顶了。</p>
+
+  <div class="task"><span class="task-tag">🔧 动手 7.4（随大作业做）</span>在大作业里留一个开关：<code>RETRIEVAL_STRATEGY = "vector" | "hybrid"</code>——同一批评测题各跑一遍，对比通过率。这张对照表就是你 7.6 评估方法论的第一次实战。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s75">
+  <div class="sec-head"><span class="sec-chip">7.5</span><h2>进阶形态【浅】</h2></div>
+  <div class="goal">了解级：每个一句话，知道名词对得上人即可。</div>
+
+  <div class="tbl-wrap"><table>
+    <tr><th>形态</th><th>一句话</th><th>什么时候你会需要</th></tr>
+    <tr><td>查询改写</td><td>用 LLM 把口语问题改写成检索友好形式（"那个工具协议咋配来着"→"MCP 配置方法"）；含多查询扩展（一个问题拆成 3 个角度各查一遍）</td><td>用户输入口语化严重时</td></tr>
+    <tr><td>多路召回</td><td>同一问题同时查向量/BM25/摘要索引等多路，合并精排——7.4 混合检索的泛化版</td><td>单一索引明显不够时</td></tr>
+    <tr><td>GraphRAG</td><td>从文档抽实体关系建知识图谱，检索沿图走（"MCP 的作者还写过什么"需要跨文档跳转）</td><td>知识之间关系密集、多跳问题时——你的笔记库暂不需要</td></tr>
+    <tr><td>多模态 RAG</td><td>图表/截图也切块向量化（用多模态 embedding），问"那张架构图"能命中</td><td>文档含大量图时</td></tr>
+    <tr><td>Contextual Retrieval</td><td>Anthropic 方案：每块入库前用 LLM 生成"这块在全文中的位置说明"拼接后再向量化——解决切块后断章取义</td><td>通用 RAG 精度瓶颈时；你用"路径+标题前缀"丐版即可</td></tr>
+  </table></div>
+  <p><b>学习姿势</b>：这五个名词知道"解决什么问题"即可，全部【浅】。真正的进阶信号是 7.6 的评测集告诉你"基线不够用了"——到时候再回来按需取用。</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s76">
+  <div class="sec-head"><span class="sec-chip">7.6</span><h2>RAG 评估：Recall@k / 忠实度 / 引用准确率</h2></div>
+  <div class="goal">验收：三个指标各量什么？"评估驱动迭代"的操作闭环是什么？动手：20 题评测集。</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>RAG 最贵的坑：<b>凭感觉调参</b>。换 chunking、加 rerank、改 Top-K——每次都"感觉好了点"，没有一个数字告诉你到底好没好。README 指定的动手（手写 20 题评测集）就是把你从"感觉派"扳成"数字派"——这也是 8.13 评估思想的第一次落地。</div>
+
+  <h3>三个指标，各量一段管道</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>指标</th><th>量什么</th><th>怎么算（丐版）</th><th>低分说明</th></tr>
+    <tr><td>Recall@k</td><td><b>检索</b>段：该找到的块，Top-k 里找到了吗</td><td>20 题里"期望命中的块进了 Top-k"的比例</td><td>chunking 或 embedding 或检索参数有问题——<b>改这里，别动 prompt</b></td></tr>
+    <tr><td>忠实度 (faithfulness)</td><td><b>生成</b>段：答案是否忠于检索到的内容</td><td>答案里的关键论断能在上下文里找到支撑吗（LLM-as-judge 或人工）</td><td>模型在自由发挥——加强"只基于资料答"的 system 约束</td></tr>
+    <tr><td>引用准确率</td><td><b>溯源</b>段（7.7）：给出的出处指对了吗</td><td>抽查引用的文件/行号，点开验证</td><td>元数据链路断了——检查块的元数据是否随路携带</td></tr>
+  </table></div>
+  <p><b>诊断顺序很重要：先 Recall@k，再忠实度，最后引用</b>——检索是上游，上游坏了改下游（prompt/引用格式）全是无用功。</p>
+
+  <h3>评估驱动迭代的闭环</h3>
+  <pre><code>写 20 题（问题 + 期望命中的块） → 跑基线 → 通过率数字
+   → &lt;80%：看失败案例 → 判断断在哪段（检索/生成/引用）
+   → 改对应段 → 重跑 → 数字变了吗？
+   → ≥80%：收工。以后每次改动（换 embedding/加 rerank）重跑一遍防退化</code></pre>
+  <p>这套"先有量尺再动手术"的思想直接迁移到第 8 章 Agent 评估（8.13）——RAG 评估是你 evaluation-driven 开发的第一课。</p>
+
+  <div class="task"><span class="task-tag">🔧 动手 7.6（README 指定，大作业的质量闸门）</span>20 题评测集，格式建议（放 <code>学习/07-RAG与知识检索/eval-set.md</code>）：
+    <pre><code>Q1: 问题："我的笔记里关于 MCP 都记了什么？"
+    期望命中：学习/08-Agent/README.md 的 8.7 节块；知识大纲.md 的 8.7 行块
+Q2: 问题："5.3 结构化输出的三层防线是什么？"
+    期望命中：学习/05-…/README.md 5.3 行块；5.3 详解文档的三层方案表块
+…（20 条，覆盖：名词类/MCP、embedding、chunking；概念类/上下文工程、评估；路径类/"哪一章讲流式"）</code></pre>
+    <b>出题技巧</b>：一半用你真实会问的口语，一半用精确术语；至少 5 题答案要跨文件。通过率 &lt;80% 就回头改 chunking/检索参数——<b>体会"评估驱动迭代"</b>（README 原话）。
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s77">
+  <div class="sec-head"><span class="sec-chip">7.7</span><h2>引用溯源【精】：答案带出处、可跳原文</h2></div>
+  <div class="goal">验收：溯源链路怎么搭？引用在 UI 上怎么呈现？为什么说这是知识库应用的刚需而非装饰？</div>
+
+  <div class="hook"><span class="hook-tag">💡 钩子</span>ChatGPT 的引用是网页链接，你的知识库引用是<b>自己的笔记</b>——"这个说法来自 5.3 详解的三层方案表"，点开跳到原文。<b>没有溯源的知识库 = 不可审计的黑盒</b>：用户没法验证答案、错了没法定位、你自己没法调试。7.6 的"引用准确率"量的就是这条链路。</div>
+
+  <h3>溯源链路：元数据的一路携带</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 860 190" role="img" aria-label="引用溯源链路：元数据从入库到引用的四段携带">
+      <style>
+        .cbx { fill: var(--card); stroke: var(--border); stroke-width: 1.5; }
+        .clbl { fill: var(--fg); font-size: 13.5px; font-weight: 600; }
+        .csub { fill: var(--muted); font-size: 11.5px; }
+        .cline { stroke: var(--accent); stroke-width: 2; fill: none; marker-end: url(#ca); }
+      </style>
+      <defs><marker id="ca" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--accent)"/></marker></defs>
+      <rect x="30" y="55" width="175" height="80" rx="10" class="cbx"/>
+      <text x="117" y="82" text-anchor="middle" class="clbl">① 入库时</text>
+      <text x="117" y="104" text-anchor="middle" class="csub">每块带 source/heading/line</text>
+      <text x="117" y="122" text-anchor="middle" class="csub">（7.2 的元数据表）</text>
+      <rect x="245" y="55" width="175" height="80" rx="10" class="cbx"/>
+      <text x="332" y="82" text-anchor="middle" class="clbl">② 检索时</text>
+      <text x="332" y="104" text-anchor="middle" class="csub">Top-5 连同元数据一起取出</text>
+      <text x="332" y="122" text-anchor="middle" class="csub">（块和出处不可分离）</text>
+      <rect x="460" y="55" width="175" height="80" rx="10" class="cbx"/>
+      <text x="547" y="82" text-anchor="middle" class="clbl">③ 生成时</text>
+      <text x="547" y="104" text-anchor="middle" class="csub">prompt 里给每块编号 [1][2]…</text>
+      <text x="547" y="122" text-anchor="middle" class="csub">要求：论断标注来源编号</text>
+      <rect x="675" y="55" width="165" height="80" rx="10" class="cbx"/>
+      <text x="757" y="82" text-anchor="middle" class="clbl">④ 展示时</text>
+      <text x="757" y="104" text-anchor="middle" class="csub">[1] 渲染成可点击卡片</text>
+      <text x="757" y="122" text-anchor="middle" class="csub">点击 → 打开原文定位行号</text>
+      <line x1="205" y1="95" x2="243" y2="95" class="cline"/>
+      <line x1="420" y1="95" x2="458" y2="95" class="cline"/>
+      <line x1="635" y1="95" x2="673" y2="95" class="cline"/>
+    </svg>
+    <div class="d-cap">溯源 = 元数据从入库到 UI 的全链路携带；断任何一环，引用就是装饰品</div>
+  </div>
+
+  <h3>生成端：让模型引用（system 模板）</h3>
+  <pre><code>你是知识库助手。只基于下面的资料回答；资料不足时明确说"资料里没有"。
+资料（每段开头标了来源编号）：
+[1]（来源：学习/05-…/README.md · 本章笔记 · 行 22）正文……
+[2]（来源：知识大纲.md · 8.7 行）正文……
+
+回答要求：
+- 每个论断后标注来源编号，如 "…… [1]"
+- 综合多个来源时逐个标注 [1][2]
+- 资料之间冲突时，指出冲突而不是擅自合并</code></pre>
+  <div class="map-note">这套格式约束就是 5.2 的正向指令原则：不说"要有引用"这种弱指令，而是给可断言的格式（"论断后标编号"）——7.6 的引用准确率才有得算。</div>
+
+  <h3>展示端：前端怎么呈现（毕业项目里的样子）</h3>
+  <ul>
+    <li><b>行内标号</b>：答案里的 <code>[1]</code> 渲染成小徽章（chat-app 的 parts 里加一个 citation 部件类型）</li>
+    <li><b>底部来源卡</b>：答案下方列出全部引用——文件名 + 标题 + 行号，点击行为分两档：<code>md 文件直接打开定位行号</code>（桌面应用天然优势：Electron 打开本地文件+滚动到行）；网页版则显示路径文本</li>
+    <li><b>交互细节</b>：hover 标号预览原文片段（元数据里把块原文也带上就行）</li>
+  </ul>
+  <div class="note"><span class="note-tag">📝 为什么是刚需不是装饰</span>三个工程理由：①<b>可验证</b>——用户敢信答案（特别是"我该按哪个步骤配 MCP"这种执行类回答）；②<b>可调试</b>——你看到错误引用立刻知道是检索段坏了还是生成段坏了（7.6 诊断链）；③<b>可迭代</b>——引用准确率是回归测试的免费指标。第 8 章 Agent 的"工具结果也要引用"（8.13 可观测）是同一思想放大。</div>
+
+  <div class="task"><span class="task-tag">🔧 动手 7.7（随大作业做）</span>在知识库答案里检查三件事：①每个论断都有标号吗（忠实度+引用联动）；②点开一个引用，跳到的位置和论断对得上吗；③问一个"资料里没有"的问题（如"我的密码是什么"）——模型应该拒答而不是编。三条全过，溯源链路才算通。
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s-out">
+  <div class="sec-head"><span class="sec-chip">产出</span><h2>本章产出（README 指定 = 毕业项目 M5 零件）</h2></div>
+  <div class="goal">两件：能问答的个人知识库 + 20 题评测集（通过率 ≥80%）。</div>
+  <ol>
+    <li><strong>个人知识库</strong>：把 <code>学习/</code> 和 <code>资源/</code> 的 md 做成 RAG 问答。建议路线：直接长在 chat-app 里（新工具 <code>search_notes</code>，模型自动决定何时检索——第 8 章 Agent 式用法）或独立 CLI（先通管道再上 UI）。落位 <code>实验/knowledge-base/</code> 或并入 chat-app，你选。</li>
+    <li><strong>评测集</strong>：<code>eval-set.md</code> 20 题，跑分 ≥80%，附带一张"失败案例分析 → 改了什么 → 数字变化"的迭代记录。</li>
+  </ol>
+  <p>前置依赖：需要一个 embedding API 的 Key（硅基流动/智谱，DeepSeek 没有）。拿到后说一声，我帮你把 7.3 的相似度脚本和 7.6 的评测管道搭起来。</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="s99">
+  <div class="sec-head"><span class="sec-chip">附录</span><h2>自检</h2></div>
+  <div class="goal">全过 + 大作业做完 → 勾掉 7.1–7.7 与本章产出。</div>
+
+  <details class="qa"><summary>Q1（7.1）RAG 同时解决的三个问题？和微调的分工口诀？</summary>
+    <div class="ans">知识截止（检索最新资料）、私有知识（检索你的资料）、幻觉（有据可查+可引用）。口诀：<b>"知识"用 RAG，"行为"用微调</b>——RAG 是开卷考（上下文注入），微调是改脑子（改权重），更新成本天差地别。</div>
+  </details>
+  <details class="qa"><summary>Q2（7.1）128K 窗口时代为什么还要 RAG？经验线？</summary>
+    <div class="ans">成本（每轮全量重发 vs Top-5 片段）、精度（lost in the middle：塞 50 页找一页中间的漏读）、规模（百万字塞不下）。经验线：<b>几千字直接塞，几万字以上 RAG</b>。</div>
+  </details>
+  <details class="qa"><summary>Q3（7.2）为什么说 chunking 决定质量上限？三参数经验值？</summary>
+    <div class="ans">切烂了语义就碎了，后面再强的检索也救不回（垃圾进垃圾出）。块大小 300~800 字符（碎→说不清，大→向量平均化）、重叠 10~20%（防答案在切缝上）、元数据（source/heading/line——7.7 溯源全靠它）。</div>
+  </details>
+  <details class="qa"><summary>Q4（7.3）为什么索引和查询必须同一个 embedding 模型？</summary>
+    <div class="ans">不同模型的向量在不同语义空间——坐标系都不同，跨模型余弦结果纯随机。换模型=全库重新索引。</div>
+  </details>
+  <details class="qa"><summary>Q5（7.3）数组暴力搜和 LanceDB 的分水岭？桌面为什么选 LanceDB？</summary>
+    <div class="ans">数组 O(N) 逐个余弦，万块勉强、十万块不行；LanceDB 用 ANN 索引近 O(1)。桌面选它：嵌入式（零部署）、本地（隐私）、TS 一手——和 Electron 毕业项目气质吻合。</div>
+  </details>
+  <details class="qa"><summary>Q6（7.4）纯向量检索三类翻车？混合检索救哪类？</summary>
+    <div class="ans">专有名词失明（embedding 对生僻 API 名弱）、语义漂移（相似≠能回答）、大库稀释。混合检索（向量+BM25+RRF）救专有名词类；rerank（问答相关性精排）救漂移类。</div>
+  </details>
+  <details class="qa"><summary>Q7（7.6）三指标各量哪段管道？诊断顺序？</summary>
+    <div class="ans">Recall@k 量检索段、忠实度量生成段、引用准确率量溯源段。顺序：<b>先 Recall@k</b>——检索是上游，上游坏了改 prompt 全是无用功。</div>
+  </details>
+  <details class="qa"><summary>Q8（7.6）"评估驱动迭代"的闭环是什么？</summary>
+    <div class="ans">20 题（问题+期望命中块）→ 跑基线得数字 → &lt;80% 看失败案例定位断段 → 改那段 → 重跑看数字 → ≥80% 收工；此后每次改动重跑防退化。先有量尺再动手术——8.13 的第一课。</div>
+  </details>
+  <details class="qa"><summary>Q9（7.7）溯源链路四段是什么？断一环会怎样？</summary>
+    <div class="ans">入库带元数据（source/heading/line）→ 检索连元数据一起取 → prompt 编号[1][2]要求标注 → 前端渲染可点卡片跳原文。断任何一环，引用就从"可审计证据"退化成"装饰品"。</div>
+  </details>
+  <details class="qa"><summary>Q10（7.7）为什么溯源是知识库的刚需而非装饰？</summary>
+    <div class="ans">可验证（用户敢信执行类回答）、可调试（错误引用立刻定位坏在哪段）、可迭代（引用准确率=免费回归指标）。第 8 章"工具结果可观测"是同一思想放大。</div>
+  </details>
+
+  <h3>延伸资源（README 指定，按优先级）</h3>
+  <ul>
+    <li><a href="https://github.com/vivy-yi/rag-tutorial">vivy-yi/rag-tutorial</a>（中文 20 章实战，卡住时对照——注意它是 Python，读思路用 TS 复刻）</li>
+    <li>Anthropic《<a href="https://www.anthropic.com/engineering/contextual-retrieval">Contextual Retrieval</a>》（进阶选读；7.2 的"路径+标题前缀"是其丐版）</li>
+    <li><a href="https://github.com/datawhalechina/llm-universe">Datawhale llm-universe</a> RAG 章节（中文系统课对照）</li>
+    <li><a href="https://lancedb.com/">LanceDB 文档</a>（7.3 钦点，TS SDK 一手）</li>
+  </ul>
+</section>
+
+<footer class="doc">
+  <p>快照于 2026-11-05 · 基于本章 README 与仓库《知识大纲.md》v2 · embedding 厂商/模型名与价格以当期官方文档为准 · 前置：embedding API Key（硅基流动/智谱；DeepSeek 无 embedding API）· 大作业落位建议 <code>实验/knowledge-base/</code> 或并入 chat-app。</p>
+</footer>
+
+</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+    var secs = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+    function highlight() {
+      var cur = 0;
+      secs.forEach(function (s, i) { if (s && s.getBoundingClientRect().top < 120) cur = i; });
+      links.forEach(function (a, i) { a.classList.toggle('active', i === cur); });
+    }
+    window.addEventListener('scroll', highlight, { passive: true });
+    highlight();
+  })();
+</script>
+</body>
+</html>

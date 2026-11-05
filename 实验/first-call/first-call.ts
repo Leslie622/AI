@@ -20,7 +20,7 @@ const STREAM = process.argv.includes("--stream");
 // ---------- 配置（都从 .env 读） ----------
 const BASE_URL = (process.env.LLM_BASE_URL ?? "https://api.deepseek.com").replace(/\/+$/, "");
 const API_KEY = process.env.LLM_API_KEY ?? "";
-const MODEL = process.env.LLM_MODEL ?? "deepseek-chat";
+const MODEL = process.env.LLM_MODEL ?? "deepseek-chat"; // ?? 后只是 .env 没配时的兜底；实际以 .env 为准（当前 deepseek-flash）
 const keyUnfilled = !API_KEY || API_KEY.includes("在这里") || API_KEY.includes("REPLACE-WITH");
 // HTTP 头只允许 Latin-1 字符：Key 里混入中文等字符时换无效占位 Key，让请求照常发出（能看到 401 的真实形状）
 const keyNonAscii = /[^\x20-\x7e]/.test(API_KEY);

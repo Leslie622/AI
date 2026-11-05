@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.3 动手实验室 · 结构化输出</title>
+<style>
+  :root {
+    --bg: #f6f6f8; --fg: #1c1c22; --muted: #6d6d7a; --card: #ffffff; --border: #e3e3ea;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --code-bg: #ececf2;
+    --ok: #16a34a; --ok-soft: rgba(22,163,74,.1); --bad: #dc2626; --bad-soft: rgba(220,38,38,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141419; --fg: #e7e7ee; --muted: #9c9cab; --card: #1d1d26; --border: #2d2d3a;
+      --accent: #8f94f8; --accent-soft: rgba(143, 148, 248, .12); --code-bg: #26262f;
+      --ok: #4ade80; --ok-soft: rgba(74,222,128,.12); --bad: #f87171; --bad-soft: rgba(248,113,113,.1);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-size: 15.5px; line-height: 1.75; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 20px 80px; }
+
+  header.top { padding: 44px 0 8px; }
+  header.top h1 { font-size: 25px; margin: 0 0 6px; }
+  header.top .meta { color: var(--muted); font-size: 13px; }
+  .usage {
+    margin-top: 16px; background: var(--accent-soft); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px; font-size: 14px;
+  }
+  nav.toc {
+    position: sticky; top: 0; z-index: 10; margin: 20px -20px 0; padding: 10px 20px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  nav.toc a {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  nav.toc a:hover { color: var(--fg); background: var(--accent-soft); }
+  nav.toc a.active { color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+
+  section.sec { margin-top: 52px; }
+  .sec-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .sec-chip {
+    font-size: 12.5px; color: var(--accent); background: var(--accent-soft);
+    padding: 2px 10px; border-radius: 999px; font-weight: 500; flex: none;
+  }
+  .sec-head h2 { font-size: 21px; margin: 0; }
+  .goal {
+    color: var(--muted); font-size: 13.5px; margin: 4px 0 18px;
+    padding-left: 10px; border-left: 3px solid var(--accent);
+  }
+  h3 { font-size: 17px; margin: 26px 0 8px; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 24px; }
+  li { margin: 4px 0; }
+  code { background: var(--code-bg); border-radius: 5px; padding: 1px 6px; font-size: .88em; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+  }
+  pre code { background: none; padding: 0; }
+  strong { font-weight: 600; }
+
+  .note {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; margin: 14px 0; font-size: 14px;
+  }
+  .note .note-tag { color: #d97706; font-weight: 500; margin-right: 6px; }
+  @media (prefers-color-scheme: dark) { .note .note-tag { color: #fbbf24; } }
+  .task {
+    background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--ok);
+    border-radius: 10px; padding: 12px 16px; margin: 14px 0; font-size: 14px;
+  }
+  .task .task-tag { color: var(--ok); font-weight: 500; margin-right: 6px; }
+
+  /* ---------- 关卡容器 ---------- */
+  .stage {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 20px; margin: 18px 0;
+  }
+  .stage h3 { margin-top: 4px; }
+  .stage .revealed { display: none; }
+  .stage .revealed.show { display: block; }
+  .btn {
+    display: inline-block; border: 1px solid var(--border); background: var(--accent-soft);
+    color: var(--accent); border-radius: 999px; padding: 6px 16px; font-size: 13.5px;
+    cursor: pointer; user-select: none; margin: 4px 6px 4px 0;
+  }
+  .btn:hover { filter: brightness(1.05); }
+  .btn.ghost { background: none; color: var(--muted); }
+  .btn.ok { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+  .btn.bad { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+
+  /* ---------- 关卡 1：两条管道 ---------- */
+  .pipes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+  @media (max-width: 640px) { .pipes { grid-template-columns: 1fr; } }
+  .pipe { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; }
+  .pipe h4 { margin: 0 0 8px; font-size: 14.5px; }
+  .pipe .out {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; margin: 8px 0; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .pipe .verdict { font-size: 13px; margin-top: 6px; min-height: 22px; }
+  .pipe .verdict.good { color: var(--ok); }
+  .pipe .verdict.dead { color: var(--bad); }
+
+  /* ---------- 关卡 2：JSON.parse 验尸 ---------- */
+  .tryline { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .morgue {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap;
+    word-break: break-all; margin: 10px 0;
+  }
+  .morgue .err { color: var(--bad); font-weight: 500; }
+  .morgue .good { color: var(--ok); font-weight: 500; }
+
+  /* ---------- 关卡 3/4：schema 对照 ---------- */
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+  @media (max-width: 640px) { .duo { grid-template-columns: 1fr; } }
+  .duo > div { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+  .duo h4 { margin: 0 0 6px; font-size: 14px; }
+
+  /* ---------- 关卡 5：safeParse 试驾 ---------- */
+  .sp-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .sp-out {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; line-height: 1.65; white-space: pre-wrap;
+    word-break: break-all; margin: 10px 0;
+  }
+  .sp-out .ok { color: var(--ok); font-weight: 500; }
+  .sp-out .ng { color: var(--bad); font-weight: 500; }
+
+  /* ---------- 关卡 6：self-heal 循环 ---------- */
+  .loopviz { margin: 14px 0; }
+  .loopbox {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13.5px;
+  }
+  .lstep {
+    border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px;
+    background: var(--bg); transition: all .25s;
+  }
+  .lstep.hot { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+  .larrow { color: var(--muted); }
+  .looplog {
+    margin-top: 12px; background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; line-height: 1.7; min-height: 60px; white-space: pre-wrap;
+  }
+  .looplog .t1 { color: var(--accent); font-weight: 500; }
+  .looplog .t2 { color: var(--bad); }
+  .looplog .t3 { color: var(--ok); }
+
+  .quiz { margin-top: 10px; }
+  .quiz .q { font-size: 14px; margin: 10px 0 4px; }
+  details.qa {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 4px 14px; margin: 8px 0;
+  }
+  details.qa summary { cursor: pointer; font-size: 13.5px; padding: 8px 0; }
+  details.qa .ans { color: var(--muted); font-size: 13px; border-top: 1px dashed var(--border); padding: 6px 0 10px; }
+
+  footer.doc {
+    margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 12.5px;
+  }
+  footer.doc a { color: var(--muted); }
+  @media print { nav.toc { display: none; } body { background: #fff; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>5.3 动手实验室 · 模型吐散文，程序吃 JSON</h1>
+  <div class="meta">主文档 <a href="./5.1-5.6-Prompt与上下文工程-详解.html">5.1–5.6 详解</a> 的 5.3 专攻页 · 全程离线可玩 · 快照 2026-11-04</div>
+  <div class="usage">
+    <b>玩法：六个关卡，从上往下点。</b>每关先看一个现象，点按钮让答案当场发生——全部模拟都内嵌在本页里，不需要 API、不需要联网。玩完六关，再跑一遍真脚本 <code>实验/first-call/meeting-notes.ts</code>（已经跑通了），两相对照。
+  </div>
+</header>
+
+<nav class="toc" aria-label="目录">
+  <a href="#g0">0 病历</a>
+  <a href="#g1">1 两条管道</a>
+  <a href="#g2">2 验尸现场</a>
+  <a href="#g3">3 双胞胎</a>
+  <a href="#g4">4 Zod 试驾</a>
+  <a href="#g5">5 自愈循环</a>
+  <a href="#g6">6 收拢</a>
+</nav>
+
+<!-- ================================================================ -->
+<section class="sec" id="g0">
+  <div class="sec-head"><span class="sec-chip">关卡 0</span><h2>病历：一句话压缩了四层知识</h2></div>
+  <div class="goal">先把主文档 5.3 那句话拆开——你卡住不是因为它深，是因为它一口气说了四件事。</div>
+  <p>主文档里这句话：</p>
+  <pre><code>模型吐的是散文，你的程序要吃的是 JSON——这道裂缝是每个 LLM 应用的第一道工程题。</code></pre>
+  <p>它实际打包了四个问题，本页每个关卡拆一个：</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>#</th><th>隐藏的问题</th><th>哪关拆</th></tr>
+    <tr><td>①</td><td>模型输出的收件人是谁？人？还是代码？</td><td>关卡 1</td></tr>
+    <tr><td>②</td><td>为什么"吃 JSON"会失败？失败长什么样？</td><td>关卡 2</td></tr>
+    <tr><td>③</td><td>怎么告诉模型"我要什么形状"？怎么告诉程序"形状对不对"？</td><td>关卡 3、4</td></tr>
+    <tr><td>④</td><td>失败了之后呢？——总不能直接崩吧</td><td>关卡 5</td></tr>
+  </table></div>
+  <p>带着这四个问题往下走，每关结束你会回头看：哦，原来那句话是在说这个。</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="g1">
+  <div class="sec-head"><span class="sec-chip">关卡 1</span><h2>两条管道：同一段输出，两种命运</h2></div>
+  <div class="goal">验收：模型输出没有固定格式——它吐什么完全由你的 prompt 决定；决定"要不要 parse"的是收件人。</div>
+
+  <p><b>先破一个错的前提</b>："模型输出的本来就不是格式化的东西"。错。模型是"文本进、文本出"的函数，<b>它吐什么形状完全由你要求</b>。你说"聊聊天气"它吐散文；你说"把笔记整理成 JSON"，它吐的就是 JSON 长相的文本——JSON 本身也只是 14 个普通字符，不是什么"格式化容器"。</p>
+
+  <p>下面是<b>同一场会议、同一个模型、同一个输出</b>，只是收件人不同。点按钮看两种读法各自的下场：</p>
+
+  <div class="stage">
+    <p style="margin-top:0">模型的真实输出（就是一段文本，两边拿到的是<b>同一份</b>）：</p>
+    <div class="morgue" id="p-out">好的，以下是整理好的会议记录：
+```json
+{
+  "title": "周会",
+  "actionItems": [
+    { "owner": "小李", "task": "修导出闪退", "due": "周五前" }
+  ]
+}
+```
+希望对你有帮助！</div>
+
+    <div class="pipes">
+      <div class="pipe">
+        <h4>🧑 管道 A：渲染给人看（聊天页）</h4>
+        <p style="margin:4px 0">读法：Markdown 渲染器 + 人眼</p>
+        <button class="btn" id="p-a">模拟渲染 →</button>
+        <div class="out" id="p-a-out" style="display:none">【Markdown 渲染结果】
+客套话 —— 原样显示
+"json" —— 渲染成代码块，还带高亮
+{...}  —— 原样显示在代码块里
+客套话 —— 原样显示
+
+👤 用户看到：格式清晰的一份会议记录 ✓</div>
+        <div class="verdict" id="p-a-v"></div>
+      </div>
+      <div class="pipe">
+        <h4>🤖 管道 B：当数据用（你的程序）</h4>
+        <p style="margin:4px 0">读法：<code>JSON.parse(输出)</code></p>
+        <button class="btn" id="p-b">执行 JSON.parse →</button>
+        <div class="out" id="p-b-out" style="display:none">const obj = JSON.parse(模型输出);
+//                                          ↑ 第一个字符是"好"，不是 {
+// 💥 SyntaxError: Unexpected token '好'
+// 程序当场死亡，后续代码一行都不执行</div>
+        <div class="verdict" id="p-b-v"></div>
+      </div>
+    </div>
+    <p style="font-size:13.5px;color:var(--muted)">↓ 同一份输出，管道 A 是满分答卷，管道 B 是死刑判决。<b>输出没变，变的是读它的东西。</b>这就是"吐散文 vs 吃 JSON"的全部含义。</p>
+  </div>
+
+  <div class="note"><span class="note-tag">📝 为什么聊天让人产生"不需要 parse"的错觉</span>你在聊天页看到的 content 确实只给人看——但那是因为聊天应用在 content <b>之前</b>就把信封拆完了（<code>res.json()</code> / SSE 的 <code>JSON.parse</code>），content 本身恰是唯一不用再 parse 的字段。而 5.3/5.4 讲的是<b>让 content 也变成程序可读的数据</b>——那是 Agent 的主干道。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="g2">
+  <div class="sec-head"><span class="sec-chip">关卡 2</span><h2>验尸现场：JSON.parse 到底卡在哪</h2>
+  </div>
+  <div class="goal">验收：JSON.parse 是零容错状态机——整串必须"从一个合法开头到合法结尾"，中间一个字符违规就整串报废。</div>
+
+  <p>管道 B 为什么死得这么干脆？因为 <code>JSON.parse</code> 的游戏规则只有一条：<b>你给我的这一整串，从头到尾必须恰好是一个合法 JSON 值</b>。下面 5 份"模型真实输出"，每份都在验证规则的某一条。逐份点，看死因：</p>
+
+  <div class="stage">
+    <div class="tryline" id="m-btns">
+      <button class="btn" data-i="0">样本 1：围栏</button>
+      <button class="btn" data-i="1">样本 2：客套话</button>
+      <button class="btn" data-i="2">样本 3：中文逗号</button>
+      <button class="btn" data-i="3">样本 4：完美的</button>
+      <button class="btn" data-i="4">样本 5：外面有货</button>
+    </div>
+    <div class="morgue" id="m-code">// 点上面的样本，看 parse 的验尸报告</div>
+    <div id="m-notes" style="font-size:13.5px;color:var(--muted)"></div>
+  </div>
+
+  <h3>样本逐个的病理（玩完再看）</h3>
+  <ul style="font-size:14px">
+    <li><b>样本 1（围栏）</b>：语料里的 JSON 几乎都长在 <code>```json</code> 围栏里——模型复刻语料，忠实地带上了围栏。第一个字符是反引号 → 死。</li>
+    <li><b>样本 2（客套话）</b>："好的，以下是…"是训练数据里"助手回答"的标准开场 → 死。</li>
+    <li><b>样本 3（中文逗号）</b>：中英混排时手滑，人眼都难分辨 → 死（JSON 只认半角逗号）。</li>
+    <li><b>样本 4</b>：唯一的活路。<b>注意</b>：你能得到样本 4 的概率约 90%——不是 100%。</li>
+    <li><b>样本 5</b>：parse 成功但拿到的是<b>数组</b>，不是你要的对象——语法合法、形状不对。语法层救不了它，要靠关卡 4 的 schema。</li>
+  </ul>
+
+  <div class="note"><span class="note-tag">📝 你早见过同款死法</span>前端生涯名场面：<code>Unexpected token &lt; in JSON at position 0</code>——你 <code>res.json()</code> 一个接口，服务端却回了 HTML 错误页。那时你不会说"页面渲染不了"，你说"接口返回的不是 JSON"。模型输出带围栏 = <b>接口在错误页里夹带你要的 JSON</b>，同一种故障。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="g3">
+  <div class="sec-head"><span class="sec-chip">关卡 3</span><h2>双胞胎：JSON Schema 与 Zod</h2></div>
+  <div class="goal">验收：JSON Schema 是格式标准（给模型看的说明书）；Zod 是 npm 库（给程序用的验收员）。同一结构，两份写法。</div>
+
+  <p>关卡 2 的结论：模型输出 90% 是好的，10% 会毁一切。工程解法不是祈祷那 10% 别发生，是<b>两头加设施</b>——出口跟模型说清"要什么形状"，入口跟程序说清"什么算对"：</p>
+
+  <div class="duo">
+    <div>
+      <h4>出口设施：JSON Schema —— 不是库，是格式标准</h4>
+      <p style="font-size:13px">一份"用 JSON 描述 JSON"的公开规范。它没有代码、不装包，你手写一个对象字面量就在用它。类比 <b>OpenAPI 之于 HTTP 接口</b>。</p>
+      <pre style="font-size:12px"><code>{
+  "type": "object",
+  "properties": {
+    "owner": { "type": "string" },
+    "due":   { "type": ["string","null"] }
+  },
+  "required": ["owner","due"]
+}</code></pre>
+      <p style="font-size:13px">塞进 prompt 或 <code>response_format</code> 发给模型 → 模型照着形状交货。厂商服务器用它做约束解码，你的代码里它只是一份数据。</p>
+    </div>
+    <div>
+      <h4>入口设施：Zod —— 是库，npm i zod</h4>
+      <p style="font-size:13px">TS/JS 库，用<b>代码</b>声明同样的结构，一次给你两样：编译期类型 + 运行时校验。类比：<b>能跑的 TypeScript 类型</b>。</p>
+      <pre style="font-size:12px"><code>const S = z.object({
+  owner: z.string(),
+  due:   z.string().nullable(),
+});
+type M = z.infer&lt;typeof S&gt;; // 类型
+S.safeParse(data);          // 校验</code></pre>
+      <p style="font-size:13px">TS 类型编译后就蒸发，运行时没东西替你查 API 吐回的对象 → Zod = <b>类型的运行时形态</b>。</p>
+    </div>
+  </div>
+
+  <div class="note"><span class="note-tag">📝 为什么要两份</span>收件人不同：Schema 的读者是<b>模型</b>（它只认识 prompt 里的文本），Zod 的读者是<b>你的程序</b>（它只认识运行时对象）。同一个"会议记录"结构，说给两个完全不同的听众听。重复很蠢 → Vercel AI SDK 能从 Zod 自动导出 JSON Schema，写一份两处用——第 6 章的福利。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="g4">
+  <div class="sec-head"><span class="sec-chip">关卡 4</span><h2>Zod 试驾：语法对 ≠ 形状对</h2></div>
+  <div class="goal">验收：JSON.parse 只查语法；Zod 查形状（字段/类型/可空）。样本 5 那种"语法合法的错货"只有 schema 层能拦。</div>
+
+  <p>关卡 2 的样本 5 暴露了 parse 的盲区：<code>[1,2,3]</code> 语法完全合法，但它不是会议记录。<b>JSON.parse 只回答"这是不是合法 JSON"，从不回答"这是不是我点的东西"</b>——后者是 Zod 的岗位。下面用 5.3 的真实 schema 试驾 5 份货：</p>
+
+  <div class="stage">
+    <p style="margin-top:0">用这个 schema 验收（5.3 脚本里的那份）：</p>
+    <pre style="font-size:12px"><code>MeetingSchema = z.object({
+  title: z.string(),
+  decisions: z.array(z.string()),
+  actionItems: z.array(z.object({
+    owner: z.string(),
+    task: z.string(),
+    due: z.string().nullable(),   // due 允许 null
+  })),
+})</code></pre>
+    <div class="sp-row" id="sp-btns">
+      <button class="btn" data-i="0">货 1：全对的</button>
+      <button class="btn" data-i="1">货 2：owner 编造</button>
+      <button class="btn" data-i="2">货 3：due 是数字</button>
+      <button class="btn" data-i="3">货 4：缺 decisions</button>
+      <button class="btn" data-i="4">货 5：压根是数组</button>
+    </div>
+    <div class="sp-out" id="sp-out">// 点上面的货，看 safeParse 的验收单</div>
+    <div id="sp-notes" style="font-size:13.5px;color:var(--muted)"></div>
+  </div>
+
+  <div class="note"><span class="note-tag">📝 货 2 是最阴的一种</span>parse 和 Zod 都拦不住"字段存在但值是编的"——Zod 只能查"owner 是字符串"，不能查"owner 是真名"。这是 4.8 幻觉在结构化世界的变身：<b>语法可校验，事实不可校验</b>。防线只剩下游：让负责人自己确认工单。</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="g5">
+  <div class="sec-head"><span class="sec-chip">关卡 5</span><h2>自愈循环：失败不是终点，是下一轮的输入</h2></div>
+  <div class="goal">验收：parse/Zod 失败不抛给用户——把错误喂回模型让它自己修。循环体在你的代码里。</div>
+
+  <p>前三关全部是"失败长什么样"。工程上最优雅的一步：<b>失败不抛给人，喂回模型</b>——它知道自己刚才输出了什么，把 Zod 的报错贴给它，它改得比你还快。5.3 脚本的 <code>tidy()</code> 就是个最多两轮的循环：</p>
+
+  <div class="stage">
+    <div class="loopviz">
+      <div class="loopbox">
+        <span class="lstep" id="l1">1. 发请求</span><span class="larrow">→</span>
+        <span class="lstep" id="l2">2. 模型输出</span><span class="larrow">→</span>
+        <span class="lstep" id="l3">3. parse+Zod</span><span class="larrow">→</span>
+        <span class="lstep" id="l4">4. ✓ 交付</span>
+        <span class="larrow" style="flex-basis:100%;text-align:center;margin-top:6px">↓ 校验不过时：5. 带错误重发（最多 2 轮）</span>
+      </div>
+    </div>
+    <button class="btn" id="lh-run">▶ 播放一轮"一次过"的循环</button>
+    <button class="btn ghost" id="lh-run2">▶ 播放一轮"翻车自愈"的循环</button>
+    <div class="looplog" id="lh-log">（选一个剧本点播放）</div>
+  </div>
+
+  <div class="note"><span class="note-tag">📝 循环体在谁的代码里</span>注意循环里的每一步都是<b>你的代码</b>在驱动：发请求是 <code>fetch</code>，校验是 <code>safeParse</code>，"喂回错误"是 <code>messages.push</code>。模型每次只做一件事：读全部消息，吐下一段文本。这个"你的代码握着方向盘、模型只出力"的结构，5.4 的 Function Calling 循环一模一样——那章只是把"修 JSON"换成了"调工具"。</div>
+
+  <h3>两层防线的分工（脚本的对应行）</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>防线</th><th>代码</th><th>拦什么</th><th>失败动作</th></tr>
+    <tr><td>① 防围栏</td><td><code>replace(/^```(json)?\s*|```\s*$/g,"")</code></td><td>围栏残渣</td><td>——</td></tr>
+    <tr><td>② JSON.parse</td><td><code>try{JSON.parse}catch</code></td><td>语法错误（样本1/2/3）</td><td>包装成假对象，交给③</td></tr>
+    <tr><td>③ Zod safeParse</td><td><code>MeetingSchema.safeParse(obj)</code></td><td>形状错误（样本5、货2/3/4）</td><td><b>带错误信息重试</b></td></tr>
+    <tr><td>④ 轮次上限</td><td><code>for (attempt &lt;= 2)</code></td><td>修不好的循环</td><td>抛错，不无限烧钱</td></tr>
+  </table></div>
+</section>
+
+<!-- ================================================================ -->
+<section class="sec" id="g6">
+  <div class="sec-head"><span class="sec-chip">关卡 6</span><h2>收拢：三层方案全景</h2></div>
+  <div class="goal">验收：能复述"为什么比求模型输出 JSON 可靠"——README 的原题。</div>
+
+  <div class="tbl-wrap"><table>
+    <tr><th>层</th><th>手段</th><th>保证</th><th>与脚本对应</th></tr>
+    <tr><td>① 恳求</td><td>SYSTEM 写"只输出 JSON"</td><td>什么都不保证（≈90% 对）</td><td>SYSTEM 常量 + 防围栏 replace</td></tr>
+    <tr><td>② API 硬开关</td><td><code>response_format: {type:"json_object"}</code> / <code>json_schema</code></td><td>语法 100% 合法（约束解码：非法 token 概率归零）</td><td>脚本没用（通用性优先），厂商各家支持不一</td></tr>
+    <tr><td>③ 校验+重试</td><td>Zod safeParse + self-heal</td><td>形状/类型/可空兜底 + 失败可救</td><td>tidy() 的 for 循环</td></tr>
+  </table></div>
+
+  <div class="quiz">
+    <h3>通关自测（点开对照）</h3>
+    <details class="qa"><summary>Q1：模型输出的收件人有谁？谁决定要不要 parse？</summary><div class="ans">人或代码——由<b>应用形态</b>决定：聊天页给人（不 parse content）；提取器/Agent 给代码（parse 是主干道）。输出本身两边拿到的同一份。</div></details>
+    <details class="qa"><summary>Q2：JSON.parse 的一条铁律？三个最常见的死因？</summary><div class="ans">整串必须恰好是一个合法 JSON 值，从第一个字符开始。死因：围栏（```）、客套话、中文标点——全是模型对训练语料的忠实复刻。</div></details>
+    <details class="qa"><summary>Q3：JSON Schema 和 Zod 分别是库吗？各写给谁？</summary><div class="ans">JSON Schema 不是库，是格式标准（给<b>模型</b>看，塞 prompt / response_format）；Zod 是 npm 库（给<b>程序</b>用，safeParse + z.infer）。</div></details>
+    <details class="qa"><summary>Q4：语法合法但形状不对，parse 拦得住吗？谁拦？</summary><div class="ans">拦不住。parse 只查语法；形状（字段/类型/可空）由 Zod 在运行时查——它是"类型的运行时形态"。</div></details>
+    <details class="qa"><summary>Q5：校验失败后工程上最优雅的动作？谁握方向盘？</summary><div class="ans">不抛给用户，把错误信息 push 进 messages 喂回模型让它修（self-heal），设轮次上限防死循环。方向盘全程在<b>你的代码</b>：fetch、safeParse、messages.push 都是你在驱动。</div></details>
+    <details class="qa"><summary>Q6：Zod 能查出"owner 值是编造的"吗？</summary><div class="ans">不能——它能查类型不能查事实。语法可校验、事实不可校验，编造的值是幻觉（4.8）在结构化世界的变身，防线在下游（人工确认）。</div></details>
+  </div>
+
+  <div class="task"><span class="task-tag">🔧 最后一步：跑真的</span>模拟玩完了，跑一遍真家伙（已验证可跑）：
+    <pre><code>cd 实验/first-call
+echo "周会记录：小李说导出有bug要周五修，同意加进度条，小王下周三做用户调研" | npx tsx meeting-notes.ts</code></pre>
+    观察：输出是干净的 JSON（无围栏无客套话）；把 prompt 里的"只输出 JSON 本身"删掉再跑，看模型开始加戏、防围栏 replace 和 Zod 怎么接招。玩的 6 关全部对应这段真实代码里的某几行。
+  </div>
+</section>
+
+<footer class="doc">
+  <p>快照于 2026-11-04 · 主文档：<a href="./5.1-5.6-Prompt与上下文工程-详解.html">5.1–5.6 详解</a> · 真脚本：<a href="../../实验/first-call/meeting-notes.ts">实验/first-call/meeting-notes.ts</a>（已跑通）· 本页全部模拟离线内嵌，无 API 依赖。</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  function el(id) { return document.getElementById(id); }
+  function show(id) { var n = el(id); n.style.display = "block"; n.classList.add("show"); }
+
+  /* ---------- 关卡 1：两条管道 ---------- */
+  el("p-a").addEventListener("click", function () {
+    show("p-a-out");
+    el("p-a-v").textContent = "✓ 管道 A 满分：渲染器吃围栏，人跳过客套话——这条路上围栏是加分项";
+    el("p-a-v").className = "verdict good";
+    el("p-a").classList.add("ok");
+  });
+  el("p-b").addEventListener("click", function () {
+    show("p-b-out");
+    el("p-b-v").textContent = "✗ 管道 B 死刑：第 1 个字符就不是合法 JSON 开头——这条路上围栏是毒药";
+    el("p-b-v").className = "verdict dead";
+    el("p-b").classList.add("bad");
+  });
+
+  /* ---------- 关卡 2：JSON.parse 验尸 ---------- */
+  var samples = [
+    { code: '输入第一行："```json"\n\nJSON.parse(\'```json\\n{"title":"周会"}\\n```\')\n\n💥 SyntaxError: Unexpected token \'`\'\n\n死因：第一个字符是反引号。JSON 合法开头只有 { [ " 和数字。',
+      note: "语料里的 JSON 几乎都长在 ```json 围栏里 → 模型忠实地复刻语料样子。最常见的死法，脚本里 replace(/^```(json)?…/g,\"\") 专门治它。" },
+    { code: '输入第一行："好的，以下是整理好的会议记录："\n\nJSON.parse(\'好的，以下是…{"title":"周会"}…\')\n\n💥 SyntaxError: Unexpected token \'好\' position 0\n\n死因：客套话。"好的，以下是…"是训练数据里助手回答的标准开场——高概率 token。',
+      note: "解决办法：prompt 里写\"只输出 JSON 本身，不要解释\"（①层恳求），或 response_format 硬开关（②层）。" },
+    { code: '输入某行："owner": "小李"，   ← 注意这个逗号\n\nJSON.parse(\'{"owner":"小李"，}\')\n\n💥 SyntaxError: Unexpected token \'，\' position 17\n\n死因：中文全角逗号。人眼都难分辨（尤其是全角引号），解析器一秒毙命。',
+      note: "中英混排的手滑。没有任何 prompt 能 100% 杜绝 → 这就是为什么还需要③层兜底。" },
+    { code: 'JSON.parse(\'{"title":"周会","actionItems":[{"owner":"小李"}]}\')\n\n✓ 成功！返回对象 ✓\n\n这是唯一的活路——约 90% 的请求会得到它。',
+      note: "注意：90% ≠ 100%。生产代码不能赌这 10%——10% 的场景乘以每天一万次调用 = 每天一千次事故。" },
+    { code: 'JSON.parse(\'[1,2,3,"周会"]\')\n\n✓ 成功！返回数组 [1, 2, 3, "周会"]\n\n语法完全合法——但它不是会议记录！\nobj.title === undefined，obj.actionItems === undefined\n程序不报错、静默产出错误数据 ← 比崩溃更危险',
+      note: "parse 只查语法不查形状。这种\"合法的错货\"只有 Zod（关卡 4）能拦——货 5 同款。" },
+  ];
+  var mBtns = el("m-btns").querySelectorAll("button");
+  mBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var s = samples[+b.dataset.i];
+      el("m-code").textContent = s.code;
+      el("m-notes").textContent = "病理： " + s.note;
+      mBtns.forEach(function (x) { x.classList.remove("ok", "bad"); });
+      b.classList.add(s.code.indexOf("✓ 成功") >= 0 ? "ok" : "bad");
+    });
+  });
+
+  /* ---------- 关卡 4：safeParse 试驾 ---------- */
+  var goods = [
+    { r: "ok", out: 'MeetingSchema.safeParse(货1)\n\n✓ success: true\n  title: "周会"\n  decisions: ["同意加进度条"]\n  actionItems: [{ owner: "小李", task: "修导出闪退", due: "周五前" }]\n\nparsed.data 类型 = Meeting（z.infer 推出来的）——直接可用',
+      note: "全对。这是 tidy() 第一次尝试就 return parsed.data 的快乐路径。" },
+    { r: "ng", out: 'MeetingSchema.safeParse(货2)\n\n✗ success: false\n  owner: "张伟" ← schema 查不出真假！\n\n语法对、类型对（它是字符串）、字段全——\n但这个名字模型根本没在笔记里见过，是编的。\n\nZod 照单全收 ✓（它只能查形状）',
+      note: "最阴的一种：三层防线全部通过，错误数据静默流入下游。幻觉（4.8）的结构化变身——schema 可查形状不可查事实。" },
+    { r: "ng", out: 'MeetingSchema.safeParse(货3)\n\n✗ success: false\n  ZodError: due → Expected string, received number\n  at actionItems[0].due\n\n模型把 "周五" 写成了 5（数字）。\nparse 不拦（语法合法），Zod 拦下（类型不对）。',
+      note: "这个错误信息会被原样喂回模型（self-heal）——它一看就懂怎么改。" },
+    { r: "ng", out: 'MeetingSchema.safeParse(货4)\n\n✗ success: false\n  ZodError: Required at "decisions"\n\n缺了整个字段。可能模型觉得笔记里没有决定事项\n就省略了——但 schema 说 required。',
+      note: "两种可能的修法：让模型补（self-heal 重试）；或 schema 放宽为 optional（如果业务上确实可缺）。这是 schema 设计的权衡。" },
+    { r: "ng", out: 'MeetingSchema.safeParse([1,2,3])\n\n✗ success: false\n  ZodError: Expected object, received array\n\n关卡 2 样本 5 的同款货——parse 放进来的\n"合法的错货"，在这里现出原形。',
+      note: "分工明确了：parse 守语法大门，Zod 守形状大门。两道门缺一不可。" },
+  ];
+  var spBtns = el("sp-btns").querySelectorAll("button");
+  spBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var g = goods[+b.dataset.i];
+      el("sp-out").textContent = g.out;
+      el("sp-notes").textContent = "要点： " + g.note;
+      spBtns.forEach(function (x) { x.classList.remove("ok", "bad"); });
+      b.classList.add(g.r);
+    });
+  });
+
+  /* ---------- 关卡 5：自愈循环动画 ---------- */
+  var steps = ["l1", "l2", "l3", "l4"];
+  function clearHot() { steps.forEach(function (id) { el(id).classList.remove("hot"); }); }
+  function playScript(lines, done) {
+    var log = el("lh-log");
+    log.textContent = "";
+    var i = 0;
+    clearHot();
+    (function next() {
+      if (i >= lines.length) { if (done) done(); return; }
+      var L = lines[i++];
+      if (L.hot) { clearHot(); el(L.hot).classList.add("hot"); }
+      var div = document.createElement("div");
+      div.innerHTML = L.text;
+      log.appendChild(div);
+      setTimeout(next, L.wait || 900);
+    })();
+  }
+  el("lh-run").addEventListener("click", function () {
+    playScript([
+      { hot: "l1", text: '<span class="t1">[发请求]</span> messages = [SYSTEM(含 JSON Schema), user(笔记)] → POST /chat/completions' },
+      { hot: "l2", text: '<span class="t1">[模型输出]</span> {"title":"周会","decisions":[…],"actionItems":[…]} —— 干净，无围栏' },
+      { hot: "l3", text: '<span class="t1">[parse]</span> JSON.parse ✓  <span class="t1">[Zod]</span> safeParse ✓ success' },
+      { hot: "l4", text: '<span class="t3">[交付]</span> return parsed.data —— 第一次尝试就过，循环只跑了 1 圈' },
+    ]);
+  });
+  el("lh-run2").addEventListener("click", function () {
+    playScript([
+      { hot: "l1", text: '<span class="t1">[发请求]</span> messages = [SYSTEM, user(笔记)] → POST /chat/completions' },
+      { hot: "l2", text: '<span class="t1">[模型输出]</span> "好的！以下是整理结果：\\n```json\\n{…\\"due\\":5,…}\\n```" —— 加戏 + due 是数字', wait: 1200 },
+      { hot: "l3", text: '<span class="t2">[parse]</span> 防围栏 replace 先剥掉 ```json → JSON.parse ✓（语法过了）', wait: 1000 },
+      { hot: "l3", text: '<span class="t2">[Zod]</span> safeParse ✗ ZodError: due → Expected string, received number', wait: 1100 },
+      { hot: "l1", text: '<span class="t1">[自愈]</span> messages.push(assistant(原输出), user("没通过校验：due 应为 string…重新只输出 JSON"))', wait: 1300 },
+      { hot: "l2", text: '<span class="t1">[模型第 2 轮]</span> {"title":"周会",…,"due":"周五前"} —— 看到错误后修正了', wait: 1100 },
+      { hot: "l3", text: '<span class="t1">[parse ✓]</span> <span class="t1">[Zod ✓]</span> success: true' },
+      { hot: "l4", text: '<span class="t3">[交付]</span> return parsed.data —— 第 2 轮自愈成功。若 2 轮都失败 → throw，轮次上限兜底' },
+    ]);
+  });
+})();
+</script>
+</body>
+</html>

@@ -21,6 +21,11 @@
 - [ ] **8.14 安全** — 提示注入/护栏/权限最小化/沙箱/人在环＋工具认证授权（OAuth2/API key 最小权限）
 - [ ] **8.15 Agent 交互设计 【精】** — 计划预览/进度可视化/可中断恢复/人工确认弹窗（毕业项目 M6 零件）
 
+## 本章笔记
+
+- [《Building Effective Agents》中英对照精读](./Building-Effective-Agents-中英对照.html) — README 第一必读的全文翻译，每节配"连线"框钉到 8.x 对应小节（判定线/五模式/ACI/ground truth 等术语的原文出处）
+- [8.1–8.15 十五节详解（含 Agent Loop 五大件完整骨架代码、工具设计四要素表、五大失败模式定位表、MCP server 完整示例、五层框架地图、安全防御栈、交互四件套——12 题自检区）](./8.1-8.15-Agent-详解.html) — 自学主文档；8.2 手写 Loop 落位 实验/agent-lab/（未建，动工时说一声）
+
 ## 本章产出
 
 - [ ] 手写 agent loop（可运行）+ 自己的 MCP server + tracing 日志 + 300 字框架对比

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.4 实验台 · Function Calling 四步往返</title>
+<style>
+  :root {
+    --bg: #f6f6f8; --fg: #1c1c22; --muted: #6d6d7a; --card: #ffffff; --border: #e3e3ea;
+    --accent: #4f46e5; --accent-soft: rgba(79, 70, 229, .08); --code-bg: #ececf2;
+    --ok: #16a34a; --ok-soft: rgba(22,163,74,.1); --bad: #dc2626; --bad-soft: rgba(220,38,38,.08);
+    --warn: #d97706; --warn-soft: rgba(217,119,6,.1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141419; --fg: #e7e7ee; --muted: #9c9cab; --card: #1d1d26; --border: #2d2d3a;
+      --accent: #8f94f8; --accent-soft: rgba(143, 148, 248, .12); --code-bg: #26262f;
+      --ok: #4ade80; --ok-soft: rgba(74,222,128,.12); --bad: #f87171; --bad-soft: rgba(248,113,113,.1);
+      --warn: #fbbf24; --warn-soft: rgba(251,191,36,.12);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-size: 15px; line-height: 1.7; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+
+  header.top { padding: 32px 0 8px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header.top h1 { font-size: 21px; margin: 0; }
+  header.top .meta { color: var(--muted); font-size: 13px; }
+  header.top .meta a { color: var(--muted); }
+  .usage {
+    margin-top: 12px; background: var(--accent-soft); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 14px; font-size: 13.5px;
+  }
+
+  .layout { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+  @media (max-width: 880px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .panel h3 { margin: 0 0 10px; font-size: 15px; }
+
+  label.field { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  textarea#task {
+    width: 100%; min-height: 90px; resize: vertical;
+    background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+    font-size: 13.5px; line-height: 1.6;
+  }
+  textarea#task:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  .rounds-pick { margin-top: 12px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .rounds-pick input {
+    width: 64px; background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; font-size: 13px;
+  }
+
+  button.go {
+    margin-top: 14px; width: 100%; padding: 10px; border: none; border-radius: 10px;
+    background: var(--accent); color: #fff; font-size: 14.5px; cursor: pointer; font-weight: 500;
+  }
+  button.go:hover { filter: brightness(1.08); }
+  button.go:disabled { opacity: .55; cursor: wait; }
+  .stat { margin-top: 10px; font-size: 12.5px; color: var(--muted); min-height: 18px; }
+  .stat b { color: var(--fg); font-weight: 500; }
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .hint code { background: var(--code-bg); padding: 0 5px; border-radius: 4px; }
+
+  /* 四步流程卡 */
+  .flow { display: flex; align-items: stretch; gap: 8px; margin: 14px 0 6px; flex-wrap: wrap; }
+  .fstep { flex: 1 1 160px; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; background: var(--bg); min-width: 150px; }
+  .fstep b { display: block; font-size: 13px; margin-bottom: 2px; }
+  .fstep .fsub { color: var(--muted); font-size: 11.5px; }
+  .fstep.hot { border-color: var(--accent); background: var(--accent-soft); }
+  .fstep.hot b { color: var(--accent); }
+  .flow-cap { color: var(--muted); font-size: 12px; text-align: center; margin: 2px 0 0; }
+
+  /* 结果区 */
+  .verdict { font-size: 15px; font-weight: 600; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; }
+  .verdict.ok { background: var(--ok-soft); color: var(--ok); }
+  .verdict.bad { background: var(--bad-soft); color: var(--bad); }
+  .verdict.warn { background: var(--warn-soft); color: var(--warn); }
+  .verdict .d { font-weight: 400; font-size: 13px; display: block; margin-top: 2px; }
+
+  .round-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+  .round-head {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 9px 14px; background: var(--bg); border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .round-head .n { background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 12px; padding: 1px 9px; border-radius: 999px; }
+  .chip { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .chip.pass { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+  .chip.fail { color: var(--bad); border-color: var(--bad); background: var(--bad-soft); }
+  .chip.tool { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+  .chip.stop { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+  .round-body { padding: 10px 14px; }
+  .round-body h4 { margin: 10px 0 4px; font-size: 12.5px; color: var(--muted); font-weight: 500; }
+
+  pre.obj, .raw {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; line-height: 1.6; margin: 4px 0 0;
+    white-space: pre-wrap; word-break: break-all; overflow-wrap: anywhere;
+    min-width: 0; max-width: 100%;
+  }
+  .exec-line { font-size: 12.5px; padding: 8px 10px; border-radius: 8px; margin-top: 6px; background: var(--warn-soft); }
+  .exec-line .fname { color: var(--warn); font-weight: 600; }
+  .exec-line.ok { background: var(--ok-soft); }
+  .exec-line.ok .fname { color: var(--ok); }
+  .errline { color: var(--bad); font-size: 12.5px; margin: 6px 0 0; white-space: pre-wrap; }
+
+  .answer { border-color: var(--ok); }
+  .answer .round-head { background: var(--ok-soft); }
+
+  .empty { color: var(--muted); font-size: 13.5px; text-align: center; padding: 40px 0; }
+  details.msgs { border: 1px solid var(--border); border-radius: 10px; margin-top: 12px; background: var(--card); }
+  details.msgs summary { cursor: pointer; padding: 10px 14px; font-size: 13.5px; font-weight: 500; }
+  details.msgs .body { padding: 0 14px 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>5.4 实验台 · Function Calling 四步往返</h1>
+  <div class="meta"><a href="/">← 返回控制台</a> · <a href="/5.3">← 5.3 实验台</a> · 主详解 <a href="/docs/学习/05-Prompt与上下文工程/5.1-5.6-Prompt与上下文工程-详解.html" target="_blank">5.1–5.6</a> · 全量日志落 logs/agent-*.json</div>
+</header>
+
+<div class="usage">
+  <b>这是 Agent 的心脏预演</b>：给模型一个 <code>read_file</code> 工具（只能读 <code>data/</code> 下的文件，如 <code>todo.md</code>），
+  看它如何「表达想用工具 → <b>你的代码</b>执行 → 结果回喂 → 模型续答」。
+  每一轮的<b>完整请求（含 tools 说明书）/ 完整响应（含 tool_calls 报文）/ 执行器实况</b>全部展开——
+  循环体在 server.ts 里，模型从头到尾只输出文本。读 <code>data/todo.md</code> 的任务最典型。
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h3>输入</h3>
+    <label class="field" for="task">给模型的任务</label>
+    <textarea id="task">帮我看看 data 目录里的 todo.md，总结一共有哪几件事，哪件最急？</textarea>
+
+    <div class="rounds-pick">
+      循环保险丝 MAX_ROUNDS = <input id="maxRounds" type="number" min="1" max="8" value="4"> 轮
+    </div>
+
+    <button class="go" id="go">开跑 →</button>
+    <div class="stat" id="stat"></div>
+    <div class="hint">
+      <b>对照玩法</b>：①把任务改成"今天天气怎么样"——模型不需要工具，第一轮直接 stop（对照：工具不是必用的）；
+      ②改成"读一下 secrets.txt"——执行器白名单会拦（文件不存在，失败也回喂，看模型怎么应对失败）。
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>四步往返 · 过程与结果</h3>
+    <div class="flow">
+      <div class="fstep" id="fs1"><b>① 发请求</b><span class="fsub">messages + tools[]（说明书）</span></div>
+      <div class="fstep" id="fs2"><b>② 模型回意图</b><span class="fsub">tool_calls 或最终回答</span></div>
+      <div class="fstep" id="fs3"><b>③ 你的代码执行</b><span class="fsub">真读文件 → role:"tool" 回喂</span></div>
+      <div class="fstep" id="fs4"><b>④ 重新请求续答</b><span class="fsub">回到 ①，直到模型 stop</span></div>
+    </div>
+    <p class="flow-cap">↺ 循环体在 server.ts 的 runAgent()：每轮 = 一次完整的 HTTP 往返，全程记录如下</p>
+    <div id="result"><div class="empty">点「开跑 →」——每一轮的完整请求/响应/执行实况会逐步展开在这里。</div></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+(function () {
+  var goBtn = document.getElementById("go");
+  var statEl = document.getElementById("stat");
+  var resultEl = document.getElementById("result");
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function pretty(obj) { return esc(JSON.stringify(obj, null, 2)); }
+  function chip(cls, text) { return '<span class="chip ' + cls + '">' + text + "</span>"; }
+
+  /* 流程卡回放：按真实轮次点亮——最后一次 tool_calls 轮亮 ①②③④，stop 轮只亮 ①② */
+  function replayFlow(rounds) {
+    ["fs1", "fs2", "fs3", "fs4"].forEach(function (id) { document.getElementById(id).classList.remove("hot"); });
+    if (!rounds || !rounds.length) { document.getElementById("fs1").classList.add("hot"); return; }
+    var lastTool = -1, lastAny = -1;
+    rounds.forEach(function (r, i) {
+      if (r.decision === "tool_calls") lastTool = i;
+      lastAny = i;
+    });
+    // 有工具轮：完整四步都走过；纯 stop（模型没用工具）：只走 ①②
+    var light = (lastTool >= 0) ? ["fs1", "fs2", "fs3", "fs4"] : ["fs1", "fs2"];
+    light.forEach(function (id) { document.getElementById(id).classList.add("hot"); });
+  }
+
+  function renderRound(r, idx) {
+    var isStop = r.decision === "stop";
+    var head = '<div class="round-head"><span class="n">第 ' + r.round + " 轮</span>" +
+      (isStop ? chip("stop", "模型决定：stop（不再要工具）") : chip("tool", "模型决定：调用工具")) +
+      '<span class="chip">' + esc(r.wire?.status || "") + " · " + (r.wire?.durationMs ?? "?") + "ms</span>" +
+      (r.finishReason ? chip("", "finish_reason: " + esc(r.finishReason)) : "") + "</div>";
+
+    var body = '<div class="round-body">';
+
+    // —— A. 完整请求（tools 说明书 + 当时全部 messages）——
+    body += "<h4>A · 本轮真实请求（model/messages/tools 三件套；看 messages 怎么一轮轮长起来）</h4>" +
+      '<div class="raw">' + esc(r.wire.method + " " + r.wire.url) + "\n" +
+      esc(Object.entries(r.wire.headers || {}).map(function (kv) { return kv[0] + ": " + kv[1]; }).join("\n")) + "</div>" +
+      '<pre class="obj" style="margin-top:6px">' + pretty(r.wire.body) + "</pre>";
+
+    // —— B. 完整响应 ——
+    if (r.fullResponse) {
+      body += "<h4>B · 上游完整响应（一字不丢）</h4>" + '<pre class="obj">' + pretty(r.fullResponse) + "</pre>";
+    } else if (r.upstream) {
+      body += "<h4>B · 上游错误响应</h4>" + '<pre class="obj">' + pretty(r.upstream) + "</pre>";
+    }
+
+    // —— C. 模型的"意图报文"关键部位 ——
+    if (!isStop && r.fullResponse) {
+      var tc = r.fullResponse?.choices?.[0]?.message?.tool_calls;
+      body += "<h4>C · 模型意图报文（message.content=" + (r.content == null ? "null —— 它没说话，只要工具" : "有内容") + "；tool_calls 的 arguments 是【字符串】，要自己 JSON.parse）</h4>" +
+        '<pre class="obj">' + pretty(tc) + "</pre>";
+    }
+
+    // —— D. 执行器实况（第 3 步：你的代码当家）——
+    if (r.toolCalls && r.toolCalls.length) {
+      body += "<h4>D · 执行器实况（server.ts 的 execReadFile：白名单校验 → 真读文件 → 结果回喂）</h4>";
+      r.toolCalls.forEach(function (tc2) {
+        body += '<div class="exec-line ' + (tc2.execOk ? "ok" : "") + '">' +
+          '<span class="fname">read_file(' + esc(tc2.argumentsRaw || "") + ")</span> → " +
+          (tc2.argsError ? "参数解析失败：" + esc(tc2.argsError)
+            : tc2.execOk
+              ? "✓ 读到 " + tc2.resultBytes + " 字符，已作为 role:\"tool\" 回喂（前 200 字：<span style=\"color:var(--muted)\">" + esc(String(tc2.resultPreview).slice(0, 200)) + "…</span>）"
+              : "✗ 执行失败（失败也回喂了！模型会看到错误信息）： " + esc(tc2.resultPreview)) +
+          "</div>";
+      });
+    }
+
+    // —— E. 模型最终发言 ——
+    if (isStop) {
+      body += "<h4>E · 模型最终回答（content —— 这次是给人看的）</h4>" +
+        '<div class="raw">' + esc(r.content || "(空)") + "</div>";
+    }
+    if (r.error) body += '<p class="errline">🌐 ' + esc(r.error) + "</p>";
+    return '<div class="round-card' + (isStop ? " answer" : "") + '">' + head + body + "</div>";
+  }
+
+  function render(r) {
+    var html = "";
+    if (r.ok) {
+      html += '<div class="verdict ok">✓ 循环完成 · ' + r.totalRounds + " 轮 · " + r.durationMs + "ms" +
+        '<span class="d">模型在最后一轮不再发 tool_calls（finish_reason: stop）——语义停由模型决定；保险丝 ' + r.maxRounds + " 轮没用上。</span></div>";
+    } else if (r.stoppedByFuse) {
+      html += '<div class="verdict warn">⚠ 保险丝熔断 · 跑满 ' + r.maxRounds + " 轮仍未拿到最终回答 · " + r.durationMs + "ms" +
+        '<span class="d">这就是 MAX_ROUNDS 存在的意义：模型可能陷入"调工具→不满意→再调"的循环，烧的是你的钱。</span></div>';
+    } else {
+      html += '<div class="verdict bad">✗ 中途出错 · ' + r.durationMs + "ms" + '<span class="d">见最后一轮的错误详情。</span></div>';
+    }
+
+    r.rounds.forEach(function (rr, i) { html += renderRound(rr, i); });
+
+    if (r.finalAnswer) {
+      html += '<div class="round-card answer"><div class="round-head"><span class="n">最终交付</span>' +
+        chip("pass", "给用户看的回答") + "</div>" +
+        '<div class="round-body"><div class="raw">' + esc(r.finalAnswer) + "</div></div></div>";
+    }
+
+    html += '<details class="msgs"><summary>📖 研究教材：最终完整 messages（"对话剧本"是怎么一轮轮长出来的）</summary><div class="body">' +
+      '<pre class="obj">' + pretty(r.messagesFinal) + "</pre>" +
+      '<div class="hint">注意 role 的顺序：system → user → assistant(tool_calls) → tool → assistant(tool_calls)? → tool → … → assistant(纯文本=stop)。5.1 说"历史是剧本"在这里具象化：每一轮你的代码都在往剧本里加两页（意图页 + 结果页）。</div></div></details>';
+
+    html += '<div class="hint">本次全过程已落盘：<code>logs/agent-*.json</code>（最新一个，含完整 messagesFinal）</div>';
+    resultEl.innerHTML = html;
+  }
+
+  goBtn.addEventListener("click", async function () {
+    var task = document.getElementById("task").value.trim();
+    var maxRounds = Number(document.getElementById("maxRounds").value) || 4;
+    if (!task) { statEl.innerHTML = "<b>任务不能为空</b>"; return; }
+    goBtn.disabled = true;
+    goBtn.textContent = "循环中…（可能多轮请求）";
+    statEl.innerHTML = "浏览器 → server.ts → 模型 ⇄ 工具 循环中…";
+    resultEl.innerHTML = '<div class="empty">模型↔工具往返中…每轮一次完整 HTTP 请求，一般 5~30 秒。</div>';
+    ["fs1", "fs2", "fs3", "fs4"].forEach(function (id) { document.getElementById(id).classList.remove("hot"); });
+    document.getElementById("fs1").classList.add("hot"); // 请求已发出
+    try {
+      var t0 = Date.now();
+      var res = await fetch("/api/agent", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: task, maxRounds: maxRounds }),
+      });
+      var r = await res.json();
+      if (!res.ok) throw new Error(r.error || "HTTP " + res.status);
+      statEl.innerHTML = "完成，" + (Date.now() - t0) + "ms";
+      replayFlow(r.rounds); // 按真实轮次回放点亮
+      render(r);
+    } catch (e) {
+      statEl.innerHTML = "<b>失败：</b>" + esc(e.message);
+      resultEl.innerHTML = '<div class="empty">出错：' + esc(e.message) + "。确认从 http://localhost:8787/5.4 访问（不能双击文件打开）。</div>";
+    } finally {
+      goBtn.disabled = false;
+      goBtn.textContent = "开跑 →";
+    }
+  });
+})();
+</script>
+</body>
+</html>
